@@ -1,0 +1,8 @@
+[package]
+name = "q16-emu"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.30"
+q16 = { path = "../q16" }

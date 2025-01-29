@@ -1,0 +1,2 @@
+[workspace]
+members = ["q16", "asm", "ld", "emu"]
