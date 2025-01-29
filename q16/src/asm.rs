@@ -43,22 +43,12 @@ impl Assembler {
 
   fn assemble_instr(&mut self, mnemonic: &str, operands: Vec<Operand>) -> Result<(), String> {
     match Opcode::from_str(mnemonic) {
-      Ok(
-        opc @ (Opcode::Add
-        | Opcode::Sub
-        | Opcode::Mul
-        | Opcode::Div
-        | Opcode::Rem
-        | Opcode::And
-        | Opcode::Or
-        | Opcode::Xor),
-      ) => {
+      Ok(opc @ (Opcode::Add | Opcode::Sub | Opcode::Mul | Opcode::Div | Opcode::Rem | Opcode::And | Opcode::Or | Opcode::Xor)) => {
         assert_len(mnemonic, &operands, 3)?;
         match operands[2] {
-          Operand::Literal(l) if opc == Opcode::Sub => self.assemble_3(
-            Opcode::And,
-            &[operands[0], operands[1], Operand::Literal(l.overflowing_neg().0)],
-          ),
+          Operand::Literal(l) if opc == Opcode::Sub => {
+            self.assemble_3(Opcode::And, &[operands[0], operands[1], Operand::Literal(l.overflowing_neg().0)])
+          }
           _ => self.assemble_3(opc, &operands),
         }
       }
@@ -94,10 +84,7 @@ impl Assembler {
         }
         "neg" => {
           assert_len("neg", &operands, 2)?;
-          self.assemble_3(
-            Opcode::Sub,
-            &[operands[0], Operand::Register(Register::R0), operands[1]],
-          )
+          self.assemble_3(Opcode::Sub, &[operands[0], Operand::Register(Register::R0), operands[1]])
         }
         "not" => {
           assert_len("not", &operands, 2)?;
@@ -115,18 +102,12 @@ impl Assembler {
               ],
             )
           } else {
-            self.assemble_3(
-              Opcode::Sub,
-              &[Operand::Register(Register::R0), operands[0], operands[1]],
-            )
+            self.assemble_3(Opcode::Sub, &[Operand::Register(Register::R0), operands[0], operands[1]])
           }
         }
         "jmp" => {
           if operands.len() == 2 {
-            self.assemble_3(
-              Opcode::Add,
-              &[Operand::Register(Register::PC), operands[0], operands[1]],
-            )
+            self.assemble_3(Opcode::Add, &[Operand::Register(Register::PC), operands[0], operands[1]])
           } else if operands.len() == 1 {
             self.assemble_2(Opcode::Add, &[Operand::Register(Register::PC), operands[0]])
           } else {

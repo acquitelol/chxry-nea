@@ -75,9 +75,7 @@ impl Obj {
     for (label, replace) in &self.label_uses {
       match self.labels.get(label) {
         Some(addr) => {
-          self
-            .data
-            .splice(*replace as usize..*replace as usize + 2, addr.to_le_bytes());
+          self.data.splice(*replace as usize..*replace as usize + 2, addr.to_le_bytes());
         }
         None => return err!("undefined label '{}'", label),
       }

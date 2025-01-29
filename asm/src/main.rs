@@ -21,12 +21,7 @@ fn main() {
   let mut assembler = Assembler::new();
   let obj = match assembler.assemble(&src) {
     Ok(_) => assembler.obj,
-    Err((n, e)) => {
-      return err_msg(
-        &e,
-        Some((&format!("{}:{}", src_path, n + 1), src.lines().nth(n).unwrap().trim())),
-      )
-    }
+    Err((n, e)) => return err_msg(&e, Some((&format!("{}:{}", src_path, n + 1), src.lines().nth(n).unwrap().trim()))),
   };
 
   // tmp
