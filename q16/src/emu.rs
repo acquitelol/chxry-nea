@@ -1,4 +1,4 @@
-use crate::{Register, Opcode, Instruction};
+use crate::{Register, Opcode, Instruction, STS_ZERO, STS_NEG, STS_RUN};
 
 pub struct Emulator {
   pub ram: Vec<u8>,
@@ -11,6 +11,14 @@ impl Emulator {
       ram: vec![0; u16::MAX as _],
       registers: Registers::default(),
     }
+  }
+
+  pub fn set_run(&mut self, run: bool) {
+    set_bit(&mut self.registers.sts, STS_RUN, run);
+  }
+
+  pub fn running(&mut self) -> bool {
+    get_bit(self.registers.sts, STS_RUN)
   }
 
   pub fn cycle(&mut self) {
@@ -145,10 +153,6 @@ impl Registers {
     self.get_mut(reg).map(|r| *r = x);
   }
 }
-
-pub const STS_ZERO: u16 = 0;
-pub const STS_NEG: u16 = 1;
-pub const STS_RUN: u16 = 8;
 
 pub fn get_bit(x: u16, n: u16) -> bool {
   (x & (1 << n)) != 0

@@ -1,2 +1,2 @@
 [workspace]
-members = ["q16", "asm", "ld", "emu"]
+members = ["q16", "asm", "ld", "emu", "tests"]

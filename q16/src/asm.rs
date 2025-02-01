@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::{Opcode, Register, Instruction};
+use crate::{Opcode, Register, Instruction, STS_RUN};
 use crate::util::{err, assert};
 use crate::obj::Obj;
 
@@ -47,7 +47,7 @@ impl Assembler {
         assert_len(mnemonic, &operands, 3)?;
         match operands[2] {
           Operand::Literal(l) if opc == Opcode::Sub => {
-            self.assemble_3(Opcode::And, &[operands[0], operands[1], Operand::Literal(l.overflowing_neg().0)])
+            self.assemble_3(Opcode::Add, &[operands[0], operands[1], Operand::Literal(l.overflowing_neg().0)])
           }
           _ => self.assemble_3(opc, &operands),
         }
@@ -78,12 +78,19 @@ impl Assembler {
             .emit_instr(Instruction::R(Opcode::Add, Register::R0, Register::R0, Register::R0));
           Ok(())
         }
+        "hlt" => {
+          self
+            .obj
+            .emit_instr(Instruction::I(Opcode::And, Register::STS, Register::STS, !(1 << STS_RUN)));
+          Ok(())
+        }
         "mov" => {
           assert_len("mov", &operands, 2)?;
           self.assemble_2(Opcode::Add, &operands)
         }
         "neg" => {
           assert_len("neg", &operands, 2)?;
+          // this emits invalid for operands[1] == literal
           self.assemble_3(Opcode::Sub, &[operands[0], Operand::Register(Register::R0), operands[1]])
         }
         "not" => {
@@ -114,6 +121,10 @@ impl Assembler {
             err!("'jmp' requires 1 or 2 operands, found {}", operands.len())
           }
         }
+        "inc" => {
+          assert_len("inc", &operands, 1)?;
+          self.assemble_3(Opcode::Add, &[operands[0], operands[0], Operand::Literal(1)])
+        }
         _ => err!("unknown mnemonic '{}'", mnemonic),
       },
     }
@@ -129,7 +140,7 @@ impl Assembler {
         self.obj.insert_label_usage(l.to_string());
         Instruction::I(opcode, rd, r1, 0)
       }
-      _ => return err!("invalid operands for '{:?}'", opcode),
+      _ => return err!("invalid operands for '{}'", opcode),
     };
     self.obj.emit_instr(instr);
     Ok(())
@@ -144,7 +155,7 @@ impl Assembler {
         self.obj.insert_label_usage(l.to_string());
         Instruction::I(opcode, rd, Register::R0, 0)
       }
-      _ => return err!("invalid operands for '{:?}'", opcode),
+      _ => return err!("invalid operands for '{}'", opcode),
     };
     self.obj.emit_instr(instr);
     Ok(())

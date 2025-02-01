@@ -4,10 +4,14 @@ pub mod obj;
 pub mod asm;
 pub mod emu;
 
-use strum::{EnumString, FromRepr};
+use strum::{EnumString, FromRepr, Display};
+
+pub const STS_ZERO: u16 = 0;
+pub const STS_NEG: u16 = 1;
+pub const STS_RUN: u16 = 8;
 
 #[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, FromRepr)]
+#[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
 #[strum(serialize_all = "snake_case")]
 #[repr(u32)]
 pub enum Register {
@@ -16,7 +20,7 @@ pub enum Register {
 }
 
 #[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, FromRepr)]
+#[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
 #[strum(serialize_all = "snake_case")]
 #[repr(u32)]
 pub enum Opcode {
