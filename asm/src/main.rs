@@ -15,21 +15,15 @@ fn main() {
   };
   let src = match fs::read_to_string(&src_path) {
     Ok(s) => s,
-    Err(_) => return err_msg(&format!("couldn't open {:?}", src_path), None),
+    Err(_) => err_msg(&format!("couldn't open {:?}", src_path), None),
   };
 
   let mut assembler = Assembler::new();
   let obj = match assembler.assemble(&src) {
     Ok(_) => assembler.obj,
-    Err((n, e)) => return err_msg(&e, Some((&format!("{}:{}", src_path, n + 1), src.lines().nth(n).unwrap().trim()))),
+    Err((n, e)) => err_msg(&e, Some((&format!("{}:{}", src_path, n + 1), src.lines().nth(n).unwrap().trim()))),
   };
 
-  // tmp
-  // let mut emu = q16::emu::Emulator::new();
-  // emu.ram = obj.data;
-  // for _ in 0..15 {
-  //   emu.cycle();
-  // }
   let out_path = PathBuf::from(src_path).with_extension("o");
   if fs::write(&out_path, obj.out_obj()).is_err() {
     err_msg(&format!("could not write to {:?}", out_path), None);

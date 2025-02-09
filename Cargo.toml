@@ -1,2 +1,3 @@
 [workspace]
-members = ["q16", "asm", "ld", "emu", "tests"]
+resolver = "2"
+members = ["q16", "asm", "ld", "emu", "tester"]

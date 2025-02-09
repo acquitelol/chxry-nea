@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Instant;
 use regex::Regex;
@@ -10,15 +10,15 @@ use q16::emu::Emulator;
 use q16::util::err;
 
 fn main() {
-  let tests: Vec<_> = fs::read_dir("./tests/tests").unwrap().collect();
+  let mut tests = vec![];
+  discover_tests("./tests", &mut tests);
   let total = tests.len();
-  let mut fails = 0;
-
   println!("running {} tests", total);
+
+  let mut fails = 0;
   let start = Instant::now();
-  for entry in tests {
-    let path = entry.unwrap().path();
-    print!("test {} ... ", path.file_name().unwrap().to_string_lossy().bright_white().italic());
+  for path in tests {
+    print!("test {} ... ", path.to_string_lossy().bright_white().italic());
     match run_test(&path) {
       Ok(_) => println!("{}", "pass".green().bold()),
       Err(e) => {
@@ -33,7 +33,17 @@ fn main() {
   if fails > 0 {
     println!("{} passed, {}", total - fails, format!("{} failed", fails).red().bold());
   } else {
-    println!("{}", format!("all passed").green().bold());
+    println!("{}", "all passed".green().bold());
+  }
+}
+
+fn discover_tests<P: AsRef<Path>>(dir: P, files: &mut Vec<PathBuf>) {
+  for entry in fs::read_dir(dir).unwrap().flatten() {
+    if entry.file_type().unwrap().is_dir() {
+      discover_tests(entry.path(), files);
+    } else {
+      files.push(entry.path());
+    }
   }
 }
 
@@ -44,17 +54,14 @@ fn run_test(path: &Path) -> Result<(), String> {
     Ok(_) => assembler.obj,
     Err(e) => return Err(e.1),
   };
-  let bin = match obj.out_bin() {
-    Ok(b) => b,
-    Err(e) => return Err(e),
-  };
+  let bin = obj.out_bin()?;
 
   let mut emu = Emulator::new();
-  emu.ram.splice(0..bin.len(), bin);
+  emu.memory.splice(0..bin.len(), bin);
 
   let find_asserts = Regex::new(r";assert.*").unwrap();
   let find_inner = Regex::new(r"(\w+)=(\d+)").unwrap();
-  for a in find_asserts.captures_iter(&src) {
+  for (n, a) in find_asserts.captures_iter(&src).enumerate() {
     emu.set_run(true);
     while emu.running() {
       emu.cycle();
@@ -65,7 +72,7 @@ fn run_test(path: &Path) -> Result<(), String> {
       let found = emu.registers.read(reg);
       let expect = u16::from_str_radix(&r[2], 10).unwrap();
       if found != expect {
-        return err!("expected {}={}, found {}", reg, expect, found);
+        return err!("assertion #{} - expected {}={}, found {}", n + 1, reg, expect, found);
       }
     }
   }

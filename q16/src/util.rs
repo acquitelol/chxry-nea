@@ -1,7 +1,9 @@
+use std::process;
 use owo_colors::OwoColorize;
 
 /// prints an error message with optional context of where and what went wrong
-pub fn err_msg(msg: &str, ctx: Option<(&str, &str)>) {
+/// exits with error code 1
+pub fn err_msg(msg: &str, ctx: Option<(&str, &str)>) -> ! {
   print!("{} {}", "error:".red().bold(), msg.bold());
   match ctx {
     Some((location, content)) => {
@@ -10,6 +12,7 @@ pub fn err_msg(msg: &str, ctx: Option<(&str, &str)>) {
     }
     None => println!(),
   }
+  process::exit(1)
 }
 
 #[macro_export]

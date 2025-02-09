@@ -2,7 +2,7 @@ use std::collections::hash_map::{HashMap, Entry};
 use crate::{Instruction, err, assert};
 
 /// magic bytes for object files
-const MAGIC: &[u8] = b"Q16";
+const MAGIC: &[u8] = b"q16";
 
 pub struct Obj {
   pub labels: HashMap<String, u16>,
@@ -38,9 +38,8 @@ impl Obj {
     }
   }
 
-  /// offset by 2 from current position
-  pub fn insert_label_usage(&mut self, label: String) {
-    self.label_uses.push((label, (self.data.len() + 2) as _));
+  pub fn insert_label_usage(&mut self, label: String, offset: usize) {
+    self.label_uses.push((label, (self.data.len() + offset) as _));
   }
 
   pub fn emit_instr(&mut self, instr: Instruction) {
@@ -50,7 +49,7 @@ impl Obj {
   pub fn extend(&mut self, other: Self) -> Result<(), String> {
     for (label, addr) in other.labels {
       match self.labels.entry(label.clone()) {
-        Entry::Occupied(_) => return Err(format!("duplicate label '{}'", label)),
+        Entry::Occupied(_) => return err!("duplicate label '{}'", label),
         Entry::Vacant(e) => {
           e.insert(self.data.len() as u16 + addr);
         }

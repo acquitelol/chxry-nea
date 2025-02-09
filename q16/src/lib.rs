@@ -4,11 +4,21 @@ pub mod obj;
 pub mod asm;
 pub mod emu;
 
+use std::fmt;
 use strum::{EnumString, FromRepr, Display};
 
-pub const STS_ZERO: u16 = 0;
-pub const STS_NEG: u16 = 1;
-pub const STS_RUN: u16 = 8;
+pub mod sts {
+  pub const ZERO: u16 = 0;
+  pub const NEG: u16 = 1;
+  pub const RUN: u16 = 8;
+}
+pub mod addr {
+  pub const VRAM: u16 = 0xc000;
+  pub const IO: u16 = 0xf000;
+}
+pub mod interrupts {
+  pub const ILLEGAL_INSTR: u16 = 0;
+}
 
 #[rustfmt::skip]
 #[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
@@ -16,7 +26,7 @@ pub const STS_RUN: u16 = 8;
 #[repr(u32)]
 pub enum Register {
   R0, R1, R2, R3, R4, R5, R6, R7, R8,
-  PC, SP, STS
+  PC, SP, RA, IT, STS
 }
 
 #[rustfmt::skip]
@@ -113,6 +123,15 @@ impl Instruction {
     match self {
       Self::I(_, _, _, imm) => Some(*imm),
       Self::R(_, _, _, _) => None,
+    }
+  }
+}
+
+impl fmt::Display for Instruction {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      Self::I(opc, rd, r1, imm) => write!(f, "{} %{}, %{}, {}", opc, rd, r1, imm),
+      Self::R(opc, rd, r1, r2) => write!(f, "{} %{}, %{}, %{}", opc, rd, r1, r2),
     }
   }
 }

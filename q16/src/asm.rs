@@ -1,5 +1,6 @@
+use std::iter;
 use std::str::FromStr;
-use crate::{Opcode, Register, Instruction, STS_RUN};
+use crate::{Opcode, Register, Instruction, sts};
 use crate::util::{err, assert};
 use crate::obj::Obj;
 
@@ -47,7 +48,8 @@ impl Assembler {
         assert_len(mnemonic, &operands, 3)?;
         match operands[2] {
           Operand::Literal(l) if opc == Opcode::Sub => {
-            self.assemble_3(Opcode::Add, &[operands[0], operands[1], Operand::Literal(l.overflowing_neg().0)])
+            // probably panics with subtracting a label
+            self.assemble_3(Opcode::Add, &[operands[0], operands[1], Operand::Literal(negate(l))])
           }
           _ => self.assemble_3(opc, &operands),
         }
@@ -71,6 +73,7 @@ impl Assembler {
           err!("'{}' requires 1 or 2 operands, found {}", mnemonic, operands.len())
         }
       }
+      // some of these could be recursive calls to assemble_instr to remove duplicated sub->add logic
       Err(_) => match mnemonic {
         "nop" => {
           self
@@ -81,7 +84,7 @@ impl Assembler {
         "hlt" => {
           self
             .obj
-            .emit_instr(Instruction::I(Opcode::And, Register::STS, Register::STS, !(1 << STS_RUN)));
+            .emit_instr(Instruction::I(Opcode::And, Register::STS, Register::STS, !(1 << sts::RUN)));
           Ok(())
         }
         "mov" => {
@@ -90,7 +93,7 @@ impl Assembler {
         }
         "neg" => {
           assert_len("neg", &operands, 2)?;
-          // this emits invalid for operands[1] == literal
+          // todo this emits invalid for operands[1] == literal
           self.assemble_3(Opcode::Sub, &[operands[0], Operand::Register(Register::R0), operands[1]])
         }
         "not" => {
@@ -99,17 +102,13 @@ impl Assembler {
         }
         "cmp" => {
           assert_len("cmp", &operands, 2)?;
-          if let Operand::Literal(l) = operands[1] {
-            self.assemble_3(
+          match operands[1] {
+            // same label consideration as with normal sub
+            Operand::Literal(l) => self.assemble_3(
               Opcode::Add,
-              &[
-                Operand::Register(Register::R0),
-                operands[0],
-                Operand::Literal(l.overflowing_neg().0),
-              ],
-            )
-          } else {
-            self.assemble_3(Opcode::Sub, &[Operand::Register(Register::R0), operands[0], operands[1]])
+              &[Operand::Register(Register::R0), operands[0], Operand::Literal(negate(l))],
+            ),
+            _ => self.assemble_3(Opcode::Sub, &[Operand::Register(Register::R0), operands[0], operands[1]]),
           }
         }
         "jmp" => {
@@ -125,6 +124,34 @@ impl Assembler {
           assert_len("inc", &operands, 1)?;
           self.assemble_3(Opcode::Add, &[operands[0], operands[0], Operand::Literal(1)])
         }
+        ".db" => {
+          assert_len(".db", &operands, 1)?;
+          match operands[0] {
+            Operand::Literal(x) => self.obj.data.push(x as u8),
+            _ => return err!("invalid operand for '.db'."),
+          }
+          Ok(())
+        }
+        ".dw" => {
+          assert_len(".db", &operands, 1)?;
+          match operands[0] {
+            Operand::Literal(x) => self.obj.data.extend(x.to_le_bytes()),
+            Operand::Label(l) => {
+              self.obj.insert_label_usage(l.to_string(), 0);
+              self.obj.data.extend([0, 0]);
+            }
+            _ => return err!("invalid operand for '.db'."),
+          }
+          Ok(())
+        }
+        ".skip" => {
+          assert_len(".skip", &operands, 1)?;
+          match operands[0] {
+            Operand::Literal(n) => self.obj.data.extend(iter::repeat_n(0, n as _)),
+            _ => return err!("invalid operand for '.skip'."),
+          }
+          Ok(())
+        }
         _ => err!("unknown mnemonic '{}'", mnemonic),
       },
     }
@@ -137,7 +164,7 @@ impl Assembler {
       [Operand::Register(rd), Operand::Register(r1), Operand::Register(r2)] => Instruction::R(opcode, rd, r1, r2),
       [Operand::Register(rd), Operand::Register(r1), Operand::Literal(imm)] => Instruction::I(opcode, rd, r1, imm),
       [Operand::Register(rd), Operand::Register(r1), Operand::Label(l)] => {
-        self.obj.insert_label_usage(l.to_string());
+        self.obj.insert_label_usage(l.to_string(), 2);
         Instruction::I(opcode, rd, r1, 0)
       }
       _ => return err!("invalid operands for '{}'", opcode),
@@ -152,7 +179,7 @@ impl Assembler {
       [Operand::Register(rd), Operand::Register(r1)] => Instruction::I(opcode, rd, r1, 0),
       [Operand::Register(rd), Operand::Literal(imm)] => Instruction::I(opcode, rd, Register::R0, imm),
       [Operand::Register(rd), Operand::Label(l)] => {
-        self.obj.insert_label_usage(l.to_string());
+        self.obj.insert_label_usage(l.to_string(), 2);
         Instruction::I(opcode, rd, Register::R0, 0)
       }
       _ => return err!("invalid operands for '{}'", opcode),
@@ -167,7 +194,7 @@ impl Assembler {
       Operand::Register(r1) => Instruction::I(opcode, Register::R0, r1, 0),
       Operand::Literal(imm) => Instruction::I(opcode, Register::R0, Register::R0, imm),
       Operand::Label(l) => {
-        self.obj.insert_label_usage(l.to_string());
+        self.obj.insert_label_usage(l.to_string(), 2);
         Instruction::I(opcode, Register::R0, Register::R0, 0)
       }
     };
@@ -183,6 +210,10 @@ fn assert_len(mnemonic: &str, operands: &[Operand], expect: usize) -> Result<(),
     expect,
     operands.len()
   )
+}
+
+fn negate(x: u16) -> u16 {
+  x.wrapping_neg()
 }
 
 #[derive(Copy, Clone, Debug)]
