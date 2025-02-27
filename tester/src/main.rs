@@ -18,7 +18,7 @@ fn main() {
   let mut fails = 0;
   let start = Instant::now();
   for path in tests {
-    print!("test {} ... ", path.to_string_lossy().bright_white().italic());
+    print!("test {} ... ", path.display().bright_white().italic());
     match run_test(&path) {
       Ok(_) => println!("{}", "pass".green().bold()),
       Err(e) => {
@@ -67,7 +67,6 @@ fn run_test(path: &Path) -> Result<(), String> {
       emu.cycle();
     }
     for r in find_inner.captures_iter(&a[0]) {
-      // error handle
       let reg = Register::from_str(&r[1]).unwrap();
       let found = emu.registers.read(reg);
       let expect = u16::from_str_radix(&r[2], 10).unwrap();

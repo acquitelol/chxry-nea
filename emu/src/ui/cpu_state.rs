@@ -1,6 +1,7 @@
+use std::time::Duration;
 use eframe::egui;
 use q16::Register;
-use crate::EmuState;
+use crate::{EmuState, ONE_SEC_NANOS};
 use crate::ui::Window;
 
 pub struct CpuStateWindow {}
@@ -25,19 +26,29 @@ impl Window for CpuStateWindow {
     });
     ui.horizontal(|ui| {
       ui.label("Emulation speed:");
-      ui.add(
-        egui::DragValue::new(&mut state.freq_hz)
-          .suffix("Hz")
-          .range(1..=10_000_000)
-          .speed(10),
-      );
-      if state.freq_warning {
-        ui.colored_label(egui::Color32::RED, "can't keep up!");
+      if ui
+        .add(
+          egui::DragValue::new(&mut state.target_speed)
+            .suffix("Hz")
+            .range(1..=50_000_000)
+            .speed(10),
+        )
+        .changed()
+      {
+        state.time_history.clear();
+      }
+      if state.time_history.len() > 0 {
+        let measured_speed =
+          ONE_SEC_NANOS / (state.time_history.items().iter().sum::<Duration>().as_nanos() as u64 / state.time_history.len() as u64);
+        ui.label(format!("(actual: {}Hz)", measured_speed));
+        if measured_speed < state.target_speed * 4 / 5 {
+          ui.colored_label(egui::Color32::RED, "can't keep up!");
+        }
       }
     });
     ui.horizontal(|ui| {
       ui.label("Last instruction:");
-      ui.monospace(state.emu.last_instr.map(|i| format!("{}", i)).unwrap_or("---".to_string()));
+      ui.monospace(state.emu.last_instr.map(|i| i.to_string()).unwrap_or("---".to_string()));
     });
     ui.separator();
 
@@ -64,8 +75,13 @@ fn reg_ui(ui: &mut egui::Ui, state: &mut EmuState, regs: &[Register]) {
   ui.horizontal(|ui| {
     for r in regs {
       ui.vertical(|ui| {
-        ui.label(format!("{}", r));
-        ui.add(egui::DragValue::new(state.emu.registers.get_mut(*r).unwrap()).hexadecimal(4, true, false));
+        ui.label(r.to_string());
+        let drag = egui::DragValue::new(state.emu.registers.get_mut(*r).unwrap());
+        ui.add(if *r == Register::STS {
+          drag.binary(16, true)
+        } else {
+          drag.hexadecimal(4, true, false)
+        });
       });
     }
   });

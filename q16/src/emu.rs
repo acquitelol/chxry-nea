@@ -36,10 +36,8 @@ impl Emulator {
       Opcode::Add => self.exec_alu(instr, u16::wrapping_add),
       Opcode::Sub => self.exec_alu(instr, u16::wrapping_sub),
       Opcode::Mul => self.exec_alu(instr, u16::wrapping_mul),
-      // Opcode::Div => self.exec_alu(instr, u16::wrapping_div), // panics on b=0 !!
-      // Opcode::Rem => self.exec_alu(instr, u16::wrapping_rem),
-      Opcode::Div => self.exec_alu(instr, |a, b| (a as i16).wrapping_div(b as i16) as u16), // todo make this nicer, fix div by 0 and
-      Opcode::Rem => self.exec_alu(instr, |a, b| (a as i16).wrapping_rem(b as i16) as u16), // is this needed?
+      Opcode::Div => self.exec_alu(instr, |a, b| if b == 0 { 0xffff } else { (a as i16).wrapping_div(b as i16) as u16 }),
+      Opcode::Rem => self.exec_alu(instr, |a, b| if b == 0 { 0xffff } else { (a as i16 % b as i16) as u16 }),
       Opcode::And => self.exec_alu(instr, |a, b| a & b),
       Opcode::Or => self.exec_alu(instr, |a, b| a | b),
       Opcode::Xor => self.exec_alu(instr, |a, b| a ^ b),
@@ -73,6 +71,12 @@ impl Emulator {
     }
   }
 
+  pub fn reset(&mut self) {
+    *self = Self::new();
+  }
+
+  // todo currently alot of trouble, weird api and there isnt really a way to preserve sts register or prevent interrupts while running handler, consider removing entirely - instead replace with reset, reset register (maybe io too) state and jump to 0
+  // or have an iret instruction
   fn interrupt(&mut self, id: u16) {
     if self.registers.it != 0 {
       self.registers.sp = self.registers.sp.wrapping_sub(4);
@@ -138,22 +142,8 @@ pub struct Registers {
 
 impl Registers {
   pub fn read(&self, reg: Register) -> u16 {
-    match reg {
-      Register::R0 => 0,
-      Register::R1 => self.r1,
-      Register::R2 => self.r2,
-      Register::R3 => self.r3,
-      Register::R4 => self.r4,
-      Register::R5 => self.r5,
-      Register::R6 => self.r6,
-      Register::R7 => self.r7,
-      Register::R8 => self.r8,
-      Register::PC => self.pc,
-      Register::SP => self.sp,
-      Register::RA => self.ra,
-      Register::IT => self.it,
-      Register::STS => self.sts,
-    }
+    // safety: self.get_mut doesnt mutate
+    unsafe { (*(self as *const _ as *mut Self)).get_mut(reg).copied().unwrap_or(0) }
   }
 
   pub fn get_mut(&mut self, reg: Register) -> Option<&mut u16> {
@@ -182,11 +172,11 @@ impl Registers {
   }
 }
 
-pub fn get_bit(x: u16, n: u16) -> bool {
+fn get_bit(x: u16, n: u16) -> bool {
   (x & (1 << n)) != 0
 }
 
-pub fn set_bit(x: &mut u16, n: u16, on: bool) {
+fn set_bit(x: &mut u16, n: u16, on: bool) {
   if on {
     *x |= 1 << n;
   } else {

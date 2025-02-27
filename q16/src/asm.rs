@@ -48,7 +48,7 @@ impl Assembler {
         assert_len(mnemonic, &operands, 3)?;
         match operands[2] {
           Operand::Literal(l) if opc == Opcode::Sub => {
-            // probably panics with subtracting a label
+            // probably panics with subtracting a label return err!("unsupported")
             self.assemble_3(Opcode::Add, &[operands[0], operands[1], Operand::Literal(negate(l))])
           }
           _ => self.assemble_3(opc, &operands),
@@ -227,7 +227,6 @@ impl<'a> Operand<'a> {
   fn parse(s: &'a str) -> Result<Self, String> {
     let mut chars = s.chars();
     match chars.next() {
-      // todo allow negative literals (decimal only)
       Some('0') => match chars.next() {
         Some('x') => Self::parse_literal(s, 16),
         Some('o') => Self::parse_literal(s, 8),

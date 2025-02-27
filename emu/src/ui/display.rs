@@ -5,7 +5,6 @@ use crate::ui::Window;
 
 const DISPLAY_WIDTH: usize = 128;
 const DISPLAY_HEIGHT: usize = 96;
-const DISPLAY_SIZE: [usize; 2] = [DISPLAY_WIDTH, DISPLAY_HEIGHT];
 
 pub struct DisplayWindow {
   texture: egui::TextureHandle,
@@ -30,16 +29,16 @@ impl Window for DisplayWindow {
     let mut pixels = Vec::with_capacity(DISPLAY_WIDTH * DISPLAY_HEIGHT);
     for i in 0..DISPLAY_WIDTH * DISPLAY_HEIGHT {
       let byte = state.emu.memory[addr::VRAM as usize + i];
-      // let r = byte & 0b11;
-      // let g = (byte >> 2) & 0b11;
-      // let b = (byte >> 4) & 0b11;
-      // pixels.push(egui::Color32::from_rgb(r * 85, g * 85, b * 85)); // todo use a real colour palette
-      pixels.push(egui::Color32::from_gray(byte));
+      let r = byte & 0b11;
+      let g = (byte >> 2) & 0b11;
+      let b = (byte >> 4) & 0b11;
+      pixels.push(egui::Color32::from_rgb(r * 85, g * 85, b * 85)); // todo use a real colour palette
+                                                                    // pixels.push(egui::Color32::from_gray(byte));
     }
 
     self.texture.set(
       egui::ColorImage {
-        size: DISPLAY_SIZE,
+        size: [DISPLAY_WIDTH, DISPLAY_HEIGHT],
         pixels,
       },
       egui::TextureOptions::NEAREST,
