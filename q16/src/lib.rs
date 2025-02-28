@@ -16,9 +16,6 @@ pub mod addr {
   pub const VRAM: u16 = 0xc000;
   pub const IO: u16 = 0xf000;
 }
-pub mod interrupts {
-  pub const ILLEGAL_INSTR: u16 = 0;
-}
 
 #[rustfmt::skip]
 #[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
@@ -26,7 +23,7 @@ pub mod interrupts {
 #[repr(u32)]
 pub enum Register {
   R0, R1, R2, R3, R4, R5, R6, R7, R8,
-  PC, SP, RA, IT, STS
+  PC, SP, RA, STS
 }
 
 #[rustfmt::skip]

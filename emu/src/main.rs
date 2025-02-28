@@ -91,7 +91,7 @@ impl eframe::App for App {
 struct EmuState {
   emu: Emulator,
   target_speed: u64,
-  time_history: CircularBuffer<Duration, 100000>,
+  time_history: CircularBuffer<Duration, 100_000>,
   log: Vec<(OffsetDateTime, String)>,
 }
 
@@ -127,7 +127,9 @@ fn spawn_emu_thread(state: Arc<Mutex<EmuState>>) {
     let start = Instant::now();
     let mut state = state.lock().unwrap();
     if state.emu.running() {
-      state.emu.cycle();
+      if state.emu.cycle() {
+        state.log("Exception occured, resetting register state.".to_string());
+      }
 
       let target_time = Duration::from_nanos(ONE_SEC_NANOS / state.target_speed);
       let elapsed = start.elapsed();

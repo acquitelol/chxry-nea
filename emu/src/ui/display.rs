@@ -29,11 +29,12 @@ impl Window for DisplayWindow {
     let mut pixels = Vec::with_capacity(DISPLAY_WIDTH * DISPLAY_HEIGHT);
     for i in 0..DISPLAY_WIDTH * DISPLAY_HEIGHT {
       let byte = state.emu.memory[addr::VRAM as usize + i];
-      let r = byte & 0b11;
-      let g = (byte >> 2) & 0b11;
-      let b = (byte >> 4) & 0b11;
-      pixels.push(egui::Color32::from_rgb(r * 85, g * 85, b * 85)); // todo use a real colour palette
-                                                                    // pixels.push(egui::Color32::from_gray(byte));
+      // let r = byte & 0b11;
+      // let g = (byte >> 2) & 0b11;
+      // let b = (byte >> 4) & 0b11;
+      // pixels.push(egui::Color32::from_rgb(r * 85, g * 85, b * 85));
+      // todo use a real colour palette f
+      pixels.push(egui::Color32::from_gray(byte));
     }
 
     self.texture.set(
@@ -43,6 +44,14 @@ impl Window for DisplayWindow {
       },
       egui::TextureOptions::NEAREST,
     );
-    ui.add(egui::Image::new(egui::load::SizedTexture::from_handle(&self.texture)).shrink_to_fit());
+    let response = ui.add(egui::Image::new(egui::load::SizedTexture::from_handle(&self.texture)).shrink_to_fit());
+
+    if response.hovered() {
+      if let Some(pos) = ui.ctx().pointer_latest_pos() {
+        let transformed = (pos - response.rect.min) / response.rect.size();
+        state.emu.memory[addr::IO as usize] = (transformed.x * DISPLAY_WIDTH as f32) as u8;
+        state.emu.memory[addr::IO as usize + 1] = (transformed.y * DISPLAY_HEIGHT as f32) as u8;
+      }
+    }
   }
 }

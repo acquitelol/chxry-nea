@@ -38,15 +38,7 @@ mandelbrot:
       jgt mandelbrot_iter_loop
 
     mandelbrot_iter_continue:
-    ; mul %r6, %r6, 5
-    cmp %r6, 100
-    jgt uhhh
-    mov %r6, 0b100111
-    jmp yuhhhh
-    uhhh:
-    mov %r6, 0
-
-    yuhhhh:
+    mul %r6, %r6, 5
     sb %r6, %r1, 0xc000 ; draw pixel
 
     inc %r1

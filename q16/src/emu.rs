@@ -1,4 +1,4 @@
-use crate::{Register, Opcode, Instruction, sts, interrupts};
+use crate::{Register, Opcode, Instruction, sts};
 
 pub struct Emulator {
   pub memory: Vec<u8>,
@@ -23,12 +23,16 @@ impl Emulator {
     get_bit(self.registers.sts, sts::RUN)
   }
 
-  pub fn cycle(&mut self) {
+  /// returns true if exception occured
+  pub fn cycle(&mut self) -> bool {
     self.last_instr =
       Instruction::from_u32(self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32);
     let instr = match self.last_instr {
       Some(i) => i,
-      None => return self.interrupt(interrupts::ILLEGAL_INSTR),
+      None => {
+        self.soft_reset();
+        return true;
+      }
     };
     self.registers.pc += 4;
 
@@ -68,25 +72,18 @@ impl Emulator {
           self.registers.pc = self.get_i_addr(instr)
         }
       }
-    }
+    };
+    false
   }
 
+  /// zero registers and memory
   pub fn reset(&mut self) {
     *self = Self::new();
   }
 
-  // todo currently alot of trouble, weird api and there isnt really a way to preserve sts register or prevent interrupts while running handler, consider removing entirely - instead replace with reset, reset register (maybe io too) state and jump to 0
-  // or have an iret instruction
-  fn interrupt(&mut self, id: u16) {
-    if self.registers.it != 0 {
-      self.registers.sp = self.registers.sp.wrapping_sub(4);
-      self.store_word(self.registers.sp.wrapping_add(2), self.registers.sts);
-      self.store_word(self.registers.sp, self.registers.pc);
-      self.registers.pc = self.load_word(self.registers.it) + id;
-      self.set_run(true);
-    } else {
-      self.set_run(false);
-    }
+  /// reset register only
+  fn soft_reset(&mut self) {
+    self.registers = Registers::default();
   }
 
   // todo handle edge cases
@@ -136,7 +133,6 @@ pub struct Registers {
   pub pc: u16,
   pub sp: u16,
   pub ra: u16,
-  pub it: u16,
   pub sts: u16,
 }
 
@@ -160,7 +156,6 @@ impl Registers {
       Register::PC => Some(&mut self.pc),
       Register::SP => Some(&mut self.sp),
       Register::RA => Some(&mut self.ra),
-      Register::IT => Some(&mut self.it),
       Register::STS => Some(&mut self.sts),
     }
   }

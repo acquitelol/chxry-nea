@@ -67,7 +67,7 @@ impl Window for CpuStateWindow {
         Register::R8,
       ],
     );
-    reg_ui(ui, state, &[Register::PC, Register::SP, Register::RA, Register::IT, Register::STS]);
+    reg_ui(ui, state, &[Register::PC, Register::SP, Register::RA, Register::STS]);
   }
 }
 
