@@ -15,5 +15,6 @@ pub trait Window {
   fn build<'a>(&self, window: egui::Window<'a>) -> egui::Window<'a> {
     window
   }
+  fn name(&self) -> &'static str;
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui);
 }

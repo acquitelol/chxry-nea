@@ -2345,7 +2345,6 @@ name = "q16-emu"
 version = "0.1.0"
 dependencies = [
  "eframe",
- "indexmap",
  "q16",
  "rfd",
  "time",

@@ -4,9 +4,9 @@ use std::{env, fs, thread};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::path::Path;
-use indexmap::IndexMap;
 use eframe::egui;
 use time::OffsetDateTime;
+use q16::Instruction;
 use q16::emu::Emulator;
 use q16::util::CircularBuffer;
 use crate::ui::{Window, CpuStateWindow, MemoryWindow, DisplayWindow, LogWindow};
@@ -27,7 +27,7 @@ fn main() {
 
 struct App {
   emu_state: Arc<Mutex<EmuState>>,
-  windows: IndexMap<String, Box<dyn Window>>,
+  windows: Vec<Box<dyn Window>>,
 }
 
 impl App {
@@ -39,19 +39,20 @@ impl App {
     let emu_state = Arc::new(Mutex::new(emu_state));
     spawn_emu_thread(emu_state.clone());
 
-    let mut windows = IndexMap::new();
-    windows.insert("CPU State".to_string(), Box::new(CpuStateWindow::new()) as _);
-    windows.insert("Memory".to_string(), Box::new(MemoryWindow::new()) as _);
-    windows.insert("Display".to_string(), Box::new(DisplayWindow::new(cc)) as _);
-    windows.insert("Log".to_string(), Box::new(LogWindow::new()) as _);
+    let windows = vec![
+      Box::new(CpuStateWindow::new()) as _,
+      Box::new(MemoryWindow::new()) as _,
+      Box::new(DisplayWindow::new(cc)) as _,
+      Box::new(LogWindow::new()) as _,
+    ];
     Self { emu_state, windows }
   }
 
-  fn for_windows<F: FnMut(Arc<Mutex<EmuState>>, &str, &mut dyn Window, &mut bool)>(&mut self, ctx: &egui::Context, mut f: F) {
-    for (n, w) in &mut self.windows {
-      let id = egui::Id::new(n);
+  fn for_windows<F: FnMut(Arc<Mutex<EmuState>>, &mut dyn Window, &mut bool)>(&mut self, ctx: &egui::Context, mut f: F) {
+    for w in &mut self.windows {
+      let id = egui::Id::new(w.name());
       let mut open = ctx.data_mut(|d| d.get_persisted(id).unwrap_or(true));
-      f(self.emu_state.clone(), n, w.as_mut(), &mut open);
+      f(self.emu_state.clone(), w.as_mut(), &mut open);
       ctx.data_mut(|d| d.insert_persisted(id, open));
     }
   }
@@ -74,15 +75,15 @@ impl eframe::App for App {
           }
         });
         ui.menu_button("Windows", |ui| {
-          self.for_windows(ctx, |_, n, _, open| {
-            ui.toggle_value(open, n);
+          self.for_windows(ctx, |_, w, open| {
+            ui.toggle_value(open, w.name());
           });
         });
       });
     });
 
-    self.for_windows(ctx, |emu, n, w, open| {
-      w.build(egui::Window::new(n).open(open))
+    self.for_windows(ctx, |emu, w, open| {
+      w.build(egui::Window::new(w.name()).open(open))
         .show(ctx, |ui| w.show(&mut emu.lock().unwrap(), ui));
     });
   }
@@ -90,6 +91,7 @@ impl eframe::App for App {
 
 struct EmuState {
   emu: Emulator,
+  last_instr: Option<Instruction>,
   target_speed: u64,
   time_history: CircularBuffer<Duration, 100_000>,
   log: Vec<(OffsetDateTime, String)>,
@@ -99,6 +101,7 @@ impl EmuState {
   fn new() -> Self {
     Self {
       emu: Emulator::new(),
+      last_instr: None,
       target_speed: 25_000_000,
       time_history: CircularBuffer::new(),
       log: vec![],
@@ -110,6 +113,7 @@ impl EmuState {
       Ok(bin) => {
         self.emu.reset();
         self.emu.memory.splice(..bin.len(), bin);
+        self.last_instr = None;
         self.log(format!("Loaded binary from '{}'.", path.as_ref().display()));
       }
       Err(_) => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
@@ -127,9 +131,10 @@ fn spawn_emu_thread(state: Arc<Mutex<EmuState>>) {
     let start = Instant::now();
     let mut state = state.lock().unwrap();
     if state.emu.running() {
-      if state.emu.cycle() {
-        state.log("Exception occured, resetting register state.".to_string());
-      }
+      match state.emu.cycle() {
+        Some(i) => state.last_instr = Some(i),
+        None => state.log("Resetting".to_string()),
+      };
 
       let target_time = Duration::from_nanos(ONE_SEC_NANOS / state.target_speed);
       let elapsed = start.elapsed();

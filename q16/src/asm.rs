@@ -48,7 +48,6 @@ impl Assembler {
         assert_len(mnemonic, &operands, 3)?;
         match operands[2] {
           Operand::Literal(l) if opc == Opcode::Sub => {
-            // probably panics with subtracting a label return err!("unsupported")
             self.assemble_3(Opcode::Add, &[operands[0], operands[1], Operand::Literal(negate(l))])
           }
           _ => self.assemble_3(opc, &operands),
@@ -73,7 +72,7 @@ impl Assembler {
           err!("'{}' requires 1 or 2 operands, found {}", mnemonic, operands.len())
         }
       }
-      // some of these could be recursive calls to assemble_instr to remove duplicated sub->add logic
+      // todo some of these could be recursive calls to assemble_instr to remove duplicated sub->add logic
       Err(_) => match mnemonic {
         "nop" => {
           self
@@ -93,7 +92,6 @@ impl Assembler {
         }
         "neg" => {
           assert_len("neg", &operands, 2)?;
-          // todo this emits invalid for operands[1] == literal
           self.assemble_3(Opcode::Sub, &[operands[0], Operand::Register(Register::R0), operands[1]])
         }
         "not" => {
@@ -103,7 +101,6 @@ impl Assembler {
         "cmp" => {
           assert_len("cmp", &operands, 2)?;
           match operands[1] {
-            // same label consideration as with normal sub
             Operand::Literal(l) => self.assemble_3(
               Opcode::Add,
               &[Operand::Register(Register::R0), operands[0], Operand::Literal(negate(l))],

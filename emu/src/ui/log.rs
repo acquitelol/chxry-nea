@@ -11,6 +11,10 @@ impl LogWindow {
 }
 
 impl Window for LogWindow {
+  fn name(&self) -> &'static str {
+    "Log"
+  }
+
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
       for (time, msg) in &state.log {

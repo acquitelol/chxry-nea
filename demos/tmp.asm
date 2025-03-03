@@ -12,6 +12,4 @@ start:
   sb %r0, %r3, 0xc000
   mov %r3, %r2
   
-
-  ; hlt
   jmp loop

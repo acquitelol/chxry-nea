@@ -3,7 +3,6 @@ use crate::{Register, Opcode, Instruction, sts};
 pub struct Emulator {
   pub memory: Vec<u8>,
   pub registers: Registers,
-  pub last_instr: Option<Instruction>,
 }
 
 impl Emulator {
@@ -11,7 +10,6 @@ impl Emulator {
     Self {
       memory: vec![0; u16::MAX as _],
       registers: Registers::default(),
-      last_instr: None,
     }
   }
 
@@ -23,17 +21,15 @@ impl Emulator {
     get_bit(self.registers.sts, sts::RUN)
   }
 
-  /// returns true if exception occured
-  pub fn cycle(&mut self) -> bool {
-    self.last_instr =
-      Instruction::from_u32(self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32);
-    let instr = match self.last_instr {
-      Some(i) => i,
-      None => {
-        self.soft_reset();
-        return true;
-      }
-    };
+  pub fn cycle(&mut self) -> Option<Instruction> {
+    let instr =
+      match Instruction::from_u32(self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32) {
+        Some(i) => i,
+        None => {
+          self.soft_reset();
+          return None;
+        }
+      };
     self.registers.pc += 4;
 
     match instr.opc() {
@@ -73,7 +69,7 @@ impl Emulator {
         }
       }
     };
-    false
+    Some(instr)
   }
 
   /// zero registers and memory
@@ -116,7 +112,7 @@ impl Emulator {
   }
 
   fn get_i_addr(&self, instr: Instruction) -> u16 {
-    self.registers.read(instr.r1()) + instr.imm().unwrap() // should wrap probably
+    self.registers.read(instr.r1()).wrapping_add(instr.imm().unwrap())
   }
 }
 

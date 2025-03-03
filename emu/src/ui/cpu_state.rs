@@ -13,6 +13,10 @@ impl CpuStateWindow {
 }
 
 impl Window for CpuStateWindow {
+  fn name(&self) -> &'static str {
+    "CPU State"
+  }
+
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
       ui.heading("State:");
@@ -41,14 +45,14 @@ impl Window for CpuStateWindow {
         let measured_speed =
           ONE_SEC_NANOS / (state.time_history.items().iter().sum::<Duration>().as_nanos() as u64 / state.time_history.len() as u64);
         ui.label(format!("(actual: {}Hz)", measured_speed));
-        if measured_speed < state.target_speed * 4 / 5 {
+        if measured_speed < state.target_speed * 9 / 10 {
           ui.colored_label(egui::Color32::RED, "can't keep up!");
         }
       }
     });
     ui.horizontal(|ui| {
       ui.label("Last instruction:");
-      ui.monospace(state.emu.last_instr.map(|i| i.to_string()).unwrap_or("---".to_string()));
+      ui.monospace(state.last_instr.map(|i| i.to_string()).unwrap_or("---".to_string()));
     });
     ui.separator();
 

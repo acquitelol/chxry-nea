@@ -21,6 +21,10 @@ impl DisplayWindow {
 }
 
 impl Window for DisplayWindow {
+  fn name(&self) -> &'static str {
+    "Display"
+  }
+
   fn build<'a>(&self, window: egui::Window<'a>) -> egui::Window<'a> {
     window.default_width(896.0)
   }

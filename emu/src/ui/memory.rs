@@ -13,6 +13,10 @@ impl MemoryWindow {
 }
 
 impl Window for MemoryWindow {
+  fn name(&self) -> &'static str {
+    "Memory"
+  }
+
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     let columns = 8;
     let text_height = ui.text_style_height(&egui::TextStyle::Monospace);
