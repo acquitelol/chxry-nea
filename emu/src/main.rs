@@ -1,6 +1,6 @@
 mod ui;
 
-use std::{env, fs, thread};
+use std::{fs, thread};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 use std::path::Path;
@@ -8,7 +8,7 @@ use eframe::egui;
 use time::OffsetDateTime;
 use q16::Instruction;
 use q16::emu::Emulator;
-use q16::util::CircularBuffer;
+use q16::util::{CircularBuffer, ArgParser};
 use crate::ui::{Window, CpuStateWindow, MemoryWindow, DisplayWindow, LogWindow};
 
 pub const ONE_SEC_NANOS: u64 = 1_000_000_000;
@@ -33,9 +33,11 @@ struct App {
 impl App {
   fn new(cc: &eframe::CreationContext) -> Self {
     let mut emu_state = EmuState::new();
-    if let Some(path) = env::args().nth(1) {
-      emu_state.load_binary(path);
+    let mut args = ArgParser::from_env();
+    if let Some(p) = args.take_flag("-b") {
+      emu_state.load_binary(p);
     }
+
     let emu_state = Arc::new(Mutex::new(emu_state));
     spawn_emu_thread(emu_state.clone());
 

@@ -1,4 +1,4 @@
-use std::{process, mem};
+use std::{process, mem, env};
 use owo_colors::OwoColorize;
 
 /// prints an error message with optional context of where and what went wrong
@@ -15,6 +15,7 @@ pub fn err_msg(msg: &str, ctx: Option<(&str, &str)>) -> ! {
   process::exit(1)
 }
 
+/// fixed size, used for efficiently tracking emulation speed
 pub struct CircularBuffer<T, const N: usize> {
   buf: [T; N],
   head: usize,
@@ -40,6 +41,7 @@ impl<T, const N: usize> CircularBuffer<T, N> {
     self.len
   }
 
+  /// overwrites oldest element if full
   pub fn push(&mut self, item: T) {
     self.buf[self.head] = item;
     self.head = (self.head + 1) % N;
@@ -51,6 +53,34 @@ impl<T, const N: usize> CircularBuffer<T, N> {
   /// unordered
   pub fn items(&self) -> &[T] {
     &self.buf[..self.len]
+  }
+}
+
+pub struct ArgParser {
+  args: Vec<String>,
+}
+
+impl ArgParser {
+  pub fn new(args: Vec<String>) -> Self {
+    Self { args }
+  }
+
+  pub fn from_env() -> Self {
+    Self::new(env::args().skip(1).collect())
+  }
+
+  pub fn take_flag(&mut self, flag: &str) -> Option<String> {
+    if let Some(pos) = self.args.iter().position(|arg| arg == flag) {
+      if pos + 1 < self.args.len() {
+        self.args.remove(pos);
+        return Some(self.args.remove(pos));
+      }
+    }
+    None
+  }
+
+  pub fn remaining(self) -> Vec<String> {
+    self.args
   }
 }
 
@@ -91,5 +121,22 @@ mod tests {
     buf.clear();
     assert_eq!(buf.len(), 0);
     assert_eq!(buf.items(), []);
+  }
+
+  fn arr_conv(xs: &[&str]) -> Vec<String> {
+    xs.iter().map(|s| s.to_string()).collect()
+  }
+
+  #[test]
+  fn test_arg_parser() {
+    let mut parser = ArgParser::new(arr_conv(&["a.o", "b.o", "-o", "test.bin", "c.o"]));
+    assert_eq!(parser.take_flag("-o"), Some("test.bin".to_string()));
+    assert_eq!(parser.take_flag("-o"), None);
+    assert_eq!(parser.take_flag("-p"), None);
+    assert_eq!(parser.remaining(), arr_conv(&["a.o", "b.o", "c.o"]));
+
+    let mut parser = ArgParser::new(arr_conv(&["a.o", "-o"]));
+    assert_eq!(parser.take_flag("-o"), None);
+    assert_eq!(parser.remaining(), arr_conv(&["a.o", "-o"]));
   }
 }

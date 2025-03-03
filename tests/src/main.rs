@@ -10,15 +10,16 @@ use q16::emu::Emulator;
 use q16::util::err;
 
 fn main() {
+  let base = "./tests/tests";
   let mut tests = vec![];
-  discover_tests("./tests", &mut tests);
+  discover_tests(base, &mut tests);
   let total = tests.len();
   println!("running {} tests", total);
 
   let mut fails = 0;
   let start = Instant::now();
   for path in tests {
-    print!("test {} ... ", path.display().bright_white().italic());
+    print!("test {} ... ", path.strip_prefix(base).unwrap().display().bright_white().italic());
     match run_test(&path) {
       Ok(_) => println!("{}", "pass".green().bold()),
       Err(e) => {
@@ -69,9 +70,9 @@ fn run_test(path: &Path) -> Result<(), String> {
     for r in find_inner.captures_iter(&a[0]) {
       let reg = Register::from_str(&r[1]).unwrap();
       let found = emu.registers.read(reg);
-      let expect = u16::from_str_radix(&r[2], 10).unwrap();
+      let expect = r[2].parse().unwrap();
       if found != expect {
-        return err!("assertion #{} - expected {}={}, found {}", n + 1, reg, expect, found);
+        return err!("assertion #{}: expected {}={}, found {}", n + 1, reg, expect, found);
       }
     }
   }

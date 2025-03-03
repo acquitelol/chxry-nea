@@ -36,11 +36,14 @@ mandelbrot:
       inc %r6
       cmp %r6, 50 ; 50 iterations
       jgt mandelbrot_iter_loop
+    jmp mandelbrot_draw_skip
 
     mandelbrot_iter_continue:
-    mul %r6, %r6, 5
+    div %r6, %r6, 10
+    add %r6, %r6, 0b10001100
     sb %r6, %r1, 0xc000 ; draw pixel
-
+    mandelbrot_draw_skip:
+    
     inc %r1
     cmp %r1, 0x3000 ; 128*96
     jne mandelbrot_display_loop

@@ -22,14 +22,14 @@ impl Emulator {
   }
 
   pub fn cycle(&mut self) -> Option<Instruction> {
-    let instr =
-      match Instruction::from_u32(self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32) {
-        Some(i) => i,
-        None => {
-          self.soft_reset();
-          return None;
-        }
-      };
+    let instr_raw = self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32;
+    let instr = match Instruction::from_u32(instr_raw) {
+      Some(i) => i,
+      None => {
+        self.soft_reset();
+        return None;
+      }
+    };
     self.registers.pc += 4;
 
     match instr.opc() {
