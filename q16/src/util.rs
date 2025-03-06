@@ -138,5 +138,9 @@ mod tests {
     let mut parser = ArgParser::new(arr_conv(&["a.o", "-o"]));
     assert_eq!(parser.take_flag("-o"), None);
     assert_eq!(parser.remaining(), arr_conv(&["a.o", "-o"]));
+
+    let mut parser = ArgParser::new(arr_conv(&[]));
+    assert_eq!(parser.take_flag("-o"), None);
+    assert_eq!(parser.remaining(), arr_conv(&[]));
   }
 }

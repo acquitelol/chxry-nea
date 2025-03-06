@@ -1,16 +1,10 @@
 start:
   mov %r8, 0xff
-  sb %r8, 0xc285
-  sb %r8, 0xc304
-  sb %r8, 0xc305
-  sb %r8, 0xc385
-  sb %r8, 0xc386
-  
-  sb %r8, 0xca14
-  sb %r8, 0xca95
-  sb %r8, 0xcb15
-  sb %r8, 0xcb14
-  sb %r8, 0xcb13
+  sb %r8, 0xd840 ; (64, 48)
+  sb %r8, 0xd8c0 ; (64, 49)
+  sb %r8, 0xd7c0 ; (64, 47)
+  sb %r8, 0xd83f ; (63, 48)
+  sb %r8, 0xd8c1 ; (65, 49)
   hlt
   
   cycle:

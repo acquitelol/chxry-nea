@@ -3,13 +3,14 @@ mod ui;
 use std::{fs, thread};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
-use std::path::Path;
+use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 use eframe::egui;
 use time::OffsetDateTime;
-use q16::Instruction;
+use q16::{Instruction, addr};
 use q16::emu::Emulator;
 use q16::util::{CircularBuffer, ArgParser};
-use crate::ui::{Window, CpuStateWindow, MemoryWindow, DisplayWindow, LogWindow};
+use crate::ui::{Window, CpuStateWindow, MemoryWindow, DisplayWindow, SerialWindow, LogWindow};
 
 pub const ONE_SEC_NANOS: u64 = 1_000_000_000;
 
@@ -36,8 +37,9 @@ impl App {
     let mut args = ArgParser::from_env();
     if let Some(p) = args.take_flag("-b") {
       emu_state.load_binary(p);
+    } else if let Some(p) = args.take_flag("-s") {
+      emu_state.load_state(p);
     }
-
     let emu_state = Arc::new(Mutex::new(emu_state));
     spawn_emu_thread(emu_state.clone());
 
@@ -45,6 +47,7 @@ impl App {
       Box::new(CpuStateWindow::new()) as _,
       Box::new(MemoryWindow::new()) as _,
       Box::new(DisplayWindow::new(cc)) as _,
+      Box::new(SerialWindow::new()) as _,
       Box::new(LogWindow::new()) as _,
     ];
     Self { emu_state, windows }
@@ -58,6 +61,19 @@ impl App {
       ctx.data_mut(|d| d.insert_persisted(id, open));
     }
   }
+
+  fn file_button<P: Fn() -> Option<PathBuf> + Send + 'static, A: Fn(Arc<Mutex<EmuState>>, PathBuf) + Send + 'static>(
+    &self,
+    picker: P,
+    action: A,
+  ) {
+    let state = self.emu_state.clone();
+    thread::spawn(move || {
+      if let Some(path) = picker() {
+        action(state, path)
+      }
+    });
+  }
 }
 
 impl eframe::App for App {
@@ -68,12 +84,22 @@ impl eframe::App for App {
       egui::menu::bar(ui, |ui| {
         ui.menu_button("File", |ui| {
           if ui.button("Load Binary").clicked() {
-            let state = self.emu_state.clone();
-            thread::spawn(move || {
-              if let Some(path) = rfd::FileDialog::new().pick_file() {
-                state.lock().unwrap().load_binary(&path);
-              }
-            });
+            self.file_button(
+              || rfd::FileDialog::new().pick_file(),
+              |state, path| state.lock().unwrap().load_binary(path),
+            );
+          }
+          if ui.button("Load State").clicked() {
+            self.file_button(
+              || rfd::FileDialog::new().pick_file(),
+              |state, path| state.lock().unwrap().load_state(path),
+            );
+          }
+          if ui.button("Save State").clicked() {
+            self.file_button(
+              || rfd::FileDialog::new().set_file_name("state.q16").save_file(),
+              |state, path| state.lock().unwrap().save_state(path),
+            );
           }
         });
         ui.menu_button("Windows", |ui| {
@@ -94,9 +120,12 @@ impl eframe::App for App {
 struct EmuState {
   emu: Emulator,
   last_instr: Option<Instruction>,
+  /// hertz
   target_speed: u64,
   time_history: CircularBuffer<Duration, 100_000>,
-  log: Vec<(OffsetDateTime, String)>,
+  msg_log: Vec<(OffsetDateTime, String)>,
+  serial_in_queue: VecDeque<u8>,
+  serial_out: Vec<u8>,
 }
 
 impl EmuState {
@@ -106,7 +135,9 @@ impl EmuState {
       last_instr: None,
       target_speed: 25_000_000,
       time_history: CircularBuffer::new(),
-      log: vec![],
+      msg_log: vec![],
+      serial_in_queue: VecDeque::new(),
+      serial_out: vec![],
     }
   }
 
@@ -122,8 +153,45 @@ impl EmuState {
     };
   }
 
+  pub fn load_state<P: AsRef<Path>>(&mut self, path: P) {
+    match fs::read(&path) {
+      Ok(bin) => {
+        self.emu = Emulator::from_state(bin);
+        self.last_instr = None;
+        self.log(format!("Loaded state from '{}'.", path.as_ref().display()));
+      }
+      Err(_) => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
+    };
+  }
+
+  pub fn save_state<P: AsRef<Path>>(&mut self, path: P) {
+    fs::write(&path, self.emu.save_state()).unwrap();
+    self.log(format!("Saved state to '{}'.", path.as_ref().display()));
+  }
+
+  pub fn cycle(&mut self) {
+    self.emu.store_word(addr::SERIAL_IO, self.serial_in_queue.len() as _);
+    if let Some(b) = self.serial_in_queue.iter().next() {
+      self.emu.store_byte(addr::SERIAL_IO + 2, *b);
+    }
+
+    let output = self.emu.cycle();
+
+    match output.instr {
+      Some(i) => self.last_instr = Some(i),
+      None => self.log("Resetting".to_string()),
+    };
+    if output.mem_load == Some(addr::SERIAL_IO + 2) {
+      self.serial_in_queue.pop_front();
+    } else if output.mem_store == Some(addr::SERIAL_IO + 2) {
+      self.serial_out.push(self.emu.load_byte(addr::SERIAL_IO + 2));
+    }
+  }
+
   pub fn log(&mut self, msg: String) {
-    self.log.push((OffsetDateTime::now_utc(), msg));
+    let time = OffsetDateTime::now_utc();
+    println!("{} {}", time, msg);
+    self.msg_log.push((time, msg));
   }
 }
 
@@ -133,10 +201,7 @@ fn spawn_emu_thread(state: Arc<Mutex<EmuState>>) {
     let start = Instant::now();
     let mut state = state.lock().unwrap();
     if state.emu.running() {
-      match state.emu.cycle() {
-        Some(i) => state.last_instr = Some(i),
-        None => state.log("Resetting".to_string()),
-      };
+      state.cycle();
 
       let target_time = Duration::from_nanos(ONE_SEC_NANOS / state.target_speed);
       let elapsed = start.elapsed();

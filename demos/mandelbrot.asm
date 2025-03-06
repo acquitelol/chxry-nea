@@ -1,12 +1,5 @@
+; draw the mandelbrot set centered at (-0.75, 0)
 start:
-  add %ra, %pc, 4
-  jmp mandelbrot
-   
-  hlt
-  jmp start
-
-; draw the mandelbrot set centered at (-0.75, 0), clobbers r1-8
-mandelbrot:
   mov %r1, 0
   mandelbrot_display_loop:
     ; cx=r2, cy=r3, x=r4, y=r5, iter=r6
@@ -40,7 +33,7 @@ mandelbrot:
 
     mandelbrot_iter_continue:
     div %r6, %r6, 10
-    add %r6, %r6, 0b10001100
+    add %r6, %r6, 0b11000011
     sb %r6, %r1, 0xc000 ; draw pixel
     mandelbrot_draw_skip:
     

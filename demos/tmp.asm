@@ -1,32 +1,22 @@
 start:
-  mov %r1, 0
-
-  mov %r1, 20
-  mov %r2, 25
-  mov %r3, 20
-  mov %r4, 25
-  mov %r5, 0b11000111
-  add %ra, %pc, 4
-  jmp draw_rect
-  
+  ; mov %r1, 732
+  ; loop:
+  ;   rem %r2, %r1, 10
+  ;   add %r2, %r2, 48
+  ;   sb %r2, 0xf002
+  ;   div %r1, %r1, 10
+  ;   cmp %r1, 0
+  ;   jgt loop
+  ; rev_loop:
+    
   hlt
-  jmp start
 
-; x: %r1-%r2, y: %r3-%r4, %r5, clobbers %r6, %r7
-draw_rect:
-  mov %r7, %r1
-  draw_rect_y:
-    draw_rect_x:
-      mul %r6, %r3, 128
-      add %r6, %r6, %r1
-      sb %r5, %r6, 0xc000
-
-      inc %r1
-      cmp %r1, %r2
-      jgt draw_rect_x
-
-    mov %r1, %r7
-    inc %r3
-    cmp %r3, %r4
-    jgt draw_rect_y
-  jmp %ra
+itoa:
+  mov %r7, 0
+  itoa_loop:
+    rem %r8, %r1, 10
+    add %r8, %r8, 48
+    sb %r2, %r3, 
+    div %r1, %r1, 10
+    cmp %r1, 0
+    jgt itoa_loop

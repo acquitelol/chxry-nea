@@ -1,6 +1,6 @@
-mov %sp, start
+mov %sp, stack
 
 jmp start
 
-stack:
+stack: ; allocate stack
 .skip 1024

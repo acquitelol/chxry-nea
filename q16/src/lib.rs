@@ -5,7 +5,7 @@ pub mod asm;
 pub mod emu;
 
 use std::fmt;
-use strum::{EnumString, FromRepr, Display};
+use strum::{EnumString, EnumIter, FromRepr, Display};
 
 pub mod sts {
   pub const ZERO: u16 = 0;
@@ -14,11 +14,11 @@ pub mod sts {
 }
 pub mod addr {
   pub const VRAM: u16 = 0xc000;
-  pub const IO: u16 = 0xf000;
+  pub const SERIAL_IO: u16 = 0xf000;
 }
 
 #[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
+#[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, EnumIter, FromRepr)]
 #[strum(serialize_all = "snake_case")]
 #[repr(u32)]
 pub enum Register {
@@ -63,7 +63,7 @@ impl Opcode {
   }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Instruction {
   R(Opcode, Register, Register, Register),
   I(Opcode, Register, Register, u16),
@@ -127,7 +127,7 @@ impl Instruction {
 impl fmt::Display for Instruction {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      Self::I(opc, rd, r1, imm) => write!(f, "{} %{}, %{}, {}", opc, rd, r1, imm),
+      Self::I(opc, rd, r1, imm) => write!(f, "{} %{}, %{}, 0x{:x}", opc, rd, r1, imm),
       Self::R(opc, rd, r1, r2) => write!(f, "{} %{}, %{}, %{}", opc, rd, r1, r2),
     }
   }

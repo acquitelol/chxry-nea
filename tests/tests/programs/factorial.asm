@@ -6,6 +6,7 @@ jmp factorial
 
 hlt ;assert r1=5040
 
+; naive factorial implementation to demonstrate function calls and recursion using the stack
 ; r1<-r1!, clobbers r2
 factorial:
   cmp %r1, 0
@@ -29,5 +30,5 @@ factorial:
   mul %r1, %r1, %r2
   jmp %ra
 
-.skip 512
+.skip 512 ; allocate stack
 stack:

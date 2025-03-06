@@ -25,7 +25,7 @@ impl Window for CpuStateWindow {
         state.emu.set_run(!running);
       }
       if ui.button(egui::RichText::new("⏩").heading()).clicked() {
-        state.emu.cycle();
+        state.cycle();
       }
     });
     ui.horizontal(|ui| {

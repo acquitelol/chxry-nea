@@ -72,7 +72,6 @@ impl Assembler {
           err!("'{}' requires 1 or 2 operands, found {}", mnemonic, operands.len())
         }
       }
-      // todo some of these could be recursive calls to assemble_instr to remove duplicated sub->add logic
       Err(_) => match mnemonic {
         "nop" => {
           self
@@ -154,7 +153,6 @@ impl Assembler {
     }
   }
 
-  // todo - dont blame opcode here, reduces duplication and also makes pseudoinstruction errors make more sense
   /// accepts %rd, %r2, %r1/imm/label, requires operands.len() == 3
   fn assemble_3(&mut self, opcode: Opcode, operands: &[Operand]) -> Result<(), String> {
     let instr = match operands[0..3] {

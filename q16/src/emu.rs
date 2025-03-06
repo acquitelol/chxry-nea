@@ -1,4 +1,7 @@
+use strum::IntoEnumIterator;
 use crate::{Register, Opcode, Instruction, sts};
+
+const MEM_LEN: usize = u16::MAX as usize + 1;
 
 pub struct Emulator {
   pub memory: Vec<u8>,
@@ -8,7 +11,7 @@ pub struct Emulator {
 impl Emulator {
   pub fn new() -> Self {
     Self {
-      memory: vec![0; u16::MAX as _],
+      memory: vec![0; MEM_LEN],
       registers: Registers::default(),
     }
   }
@@ -21,16 +24,21 @@ impl Emulator {
     get_bit(self.registers.sts, sts::RUN)
   }
 
-  pub fn cycle(&mut self) -> Option<Instruction> {
+  pub fn cycle(&mut self) -> CycleOutput {
     let instr_raw = self.load_word(self.registers.pc) as u32 + 0x10000 * self.load_word(self.registers.pc + 2) as u32;
-    let instr = match Instruction::from_u32(instr_raw) {
+    let mut output = CycleOutput {
+      instr: Instruction::from_u32(instr_raw),
+      mem_load: None,
+      mem_store: None,
+    };
+    let instr = match output.instr {
       Some(i) => i,
       None => {
         self.soft_reset();
-        return None;
+        return output;
       }
     };
-    self.registers.pc += 4;
+    self.registers.pc = self.registers.pc.wrapping_add(4);
 
     match instr.opc() {
       Opcode::Add => self.exec_alu(instr, u16::wrapping_add),
@@ -41,13 +49,31 @@ impl Emulator {
       Opcode::And => self.exec_alu(instr, |a, b| a & b),
       Opcode::Or => self.exec_alu(instr, |a, b| a | b),
       Opcode::Xor => self.exec_alu(instr, |a, b| a ^ b),
-      Opcode::Lb => self
-        .registers
-        .write(instr.rd(), self.load_byte(self.get_i_addr(instr)) as i8 as u16),
-      Opcode::Lbu => self.registers.write(instr.rd(), self.load_byte(self.get_i_addr(instr)) as u16),
-      Opcode::Lw => self.registers.write(instr.rd(), self.load_word(self.get_i_addr(instr))),
-      Opcode::Sb => self.store_byte(self.get_i_addr(instr), self.registers.read(instr.rd()) as u8),
-      Opcode::Sw => self.store_word(self.get_i_addr(instr), self.registers.read(instr.rd())),
+      Opcode::Lb => {
+        let addr = self.get_i_addr(instr);
+        output.mem_load = Some(addr);
+        self.registers.write(instr.rd(), self.load_byte(addr) as i8 as u16)
+      }
+      Opcode::Lbu => {
+        let addr = self.get_i_addr(instr);
+        output.mem_load = Some(addr);
+        self.registers.write(instr.rd(), self.load_byte(addr) as u16)
+      }
+      Opcode::Lw => {
+        let addr = self.get_i_addr(instr);
+        output.mem_load = Some(addr);
+        self.registers.write(instr.rd(), self.load_word(addr))
+      }
+      Opcode::Sb => {
+        let addr = self.get_i_addr(instr);
+        output.mem_store = Some(addr);
+        self.store_byte(addr, self.registers.read(instr.rd()) as u8);
+      }
+      Opcode::Sw => {
+        let addr = self.get_i_addr(instr);
+        output.mem_store = Some(addr);
+        self.store_word(addr, self.registers.read(instr.rd()));
+      }
       Opcode::Jeq => {
         if get_bit(self.registers.sts, sts::ZERO) {
           self.registers.pc = self.get_i_addr(instr)
@@ -69,7 +95,7 @@ impl Emulator {
         }
       }
     };
-    Some(instr)
+    output
   }
 
   /// zero registers and memory
@@ -78,24 +104,27 @@ impl Emulator {
   }
 
   /// reset register only
-  fn soft_reset(&mut self) {
+  pub fn soft_reset(&mut self) {
     self.registers = Registers::default();
   }
 
-  // todo handle edge cases
-  fn load_word(&self, addr: u16) -> u16 {
-    u16::from_le_bytes([self.memory[addr as usize], self.memory[addr as usize + 1]])
+  pub fn load_word(&self, addr: u16) -> u16 {
+    u16::from_le_bytes([self.load_byte(addr), if addr < u16::MAX { self.load_byte(addr + 1) } else { 0 }])
   }
 
-  fn load_byte(&self, addr: u16) -> u8 {
+  pub fn load_byte(&self, addr: u16) -> u8 {
     self.memory[addr as usize]
   }
 
-  fn store_word(&mut self, addr: u16, x: u16) {
-    self.memory.splice(addr as usize..addr as usize + 2, x.to_le_bytes());
+  pub fn store_word(&mut self, addr: u16, x: u16) {
+    let bytes = x.to_le_bytes();
+    self.store_byte(addr, bytes[0]);
+    if addr < u16::MAX {
+      self.store_byte(addr.wrapping_add(1), bytes[1]);
+    }
   }
 
-  fn store_byte(&mut self, addr: u16, x: u8) {
+  pub fn store_byte(&mut self, addr: u16, x: u8) {
     self.memory[addr as usize] = x;
   }
 
@@ -114,6 +143,30 @@ impl Emulator {
   fn get_i_addr(&self, instr: Instruction) -> u16 {
     self.registers.read(instr.r1()).wrapping_add(instr.imm().unwrap())
   }
+
+  pub fn save_state(&self) -> Vec<u8> {
+    let mut out = vec![];
+    out.extend(&self.memory);
+    for r in Register::iter() {
+      out.extend(self.registers.read(r).to_le_bytes());
+    }
+    out
+  }
+
+  pub fn from_state(mut data: Vec<u8>) -> Self {
+    let mut registers = Registers::default();
+    for (i, r) in Register::iter().enumerate() {
+      registers.write(r, u16::from_le_bytes([data[MEM_LEN + i * 2], data[MEM_LEN + i * 2 + 1]]));
+    }
+    data.truncate(MEM_LEN);
+    Self { memory: data, registers }
+  }
+}
+
+pub struct CycleOutput {
+  pub instr: Option<Instruction>,
+  pub mem_load: Option<u16>,
+  pub mem_store: Option<u16>,
 }
 
 #[derive(Default, Debug)]
@@ -133,11 +186,6 @@ pub struct Registers {
 }
 
 impl Registers {
-  pub fn read(&self, reg: Register) -> u16 {
-    // safety: self.get_mut doesnt mutate
-    unsafe { (*(self as *const _ as *mut Self)).get_mut(reg).copied().unwrap_or(0) }
-  }
-
   pub fn get_mut(&mut self, reg: Register) -> Option<&mut u16> {
     match reg {
       Register::R0 => None,
@@ -154,6 +202,10 @@ impl Registers {
       Register::RA => Some(&mut self.ra),
       Register::STS => Some(&mut self.sts),
     }
+  }
+  pub fn read(&self, reg: Register) -> u16 {
+    // safety: self.get_mut doesnt mutate itself
+    unsafe { (*(self as *const _ as *mut Self)).get_mut(reg).copied().unwrap_or(0) }
   }
 
   pub fn write(&mut self, reg: Register, x: u16) {

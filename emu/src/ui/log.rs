@@ -17,7 +17,7 @@ impl Window for LogWindow {
 
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-      for (time, msg) in &state.log {
+      for (time, msg) in &state.msg_log {
         ui.horizontal(|ui| {
           ui.monospace(format!("{:02}:{:02}:{:02}", time.hour(), time.minute(), time.second()));
           ui.label(msg);

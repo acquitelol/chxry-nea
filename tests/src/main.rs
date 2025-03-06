@@ -60,7 +60,7 @@ fn run_test(path: &Path) -> Result<(), String> {
   let mut emu = Emulator::new();
   emu.memory.splice(0..bin.len(), bin);
 
-  let find_asserts = Regex::new(r";assert.*").unwrap();
+  let find_asserts = Regex::new(r";assert[^;]*").unwrap();
   let find_inner = Regex::new(r"(\w+)=(\d+)").unwrap();
   for (n, a) in find_asserts.captures_iter(&src).enumerate() {
     emu.set_run(true);
