@@ -203,6 +203,7 @@ impl Registers {
       Register::STS => Some(&mut self.sts),
     }
   }
+
   pub fn read(&self, reg: Register) -> u16 {
     // safety: self.get_mut doesnt mutate itself
     unsafe { (*(self as *const _ as *mut Self)).get_mut(reg).copied().unwrap_or(0) }

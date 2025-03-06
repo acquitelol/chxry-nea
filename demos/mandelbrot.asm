@@ -40,5 +40,6 @@ start:
     inc %r1
     cmp %r1, 0x3000 ; 128*96
     jne mandelbrot_display_loop
-  
-  jmp %ra
+
+    hlt
+    jmp start

@@ -20,7 +20,6 @@ impl Window for SerialWindow {
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     ui.monospace(String::from_utf8_lossy(&state.serial_out));
     ui.separator();
-    ui.label(format!("{} bytes in queue", state.serial_in_queue.len()));
     if egui::TextEdit::singleline(&mut self.input_buf)
       .hint_text("Press enter to send")
       .desired_width(f32::INFINITY)
@@ -32,6 +31,9 @@ impl Window for SerialWindow {
       state.serial_in_queue.extend(self.input_buf.as_bytes());
       state.serial_in_queue.push_back(b'\n');
       self.input_buf.clear();
+    }
+    if !state.serial_in_queue.is_empty() {
+      ui.label(format!("{} bytes in queue", state.serial_in_queue.len()));
     }
   }
 }

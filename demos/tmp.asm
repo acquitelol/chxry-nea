@@ -1,22 +1,30 @@
 start:
-  ; mov %r1, 732
-  ; loop:
-  ;   rem %r2, %r1, 10
-  ;   add %r2, %r2, 48
-  ;   sb %r2, 0xf002
-  ;   div %r1, %r1, 10
-  ;   cmp %r1, 0
-  ;   jgt loop
-  ; rev_loop:
+  mov %r1, 1387
+  add %ra, %pc, 4
+  jmp print_int
     
   hlt
+  jmp start
 
-itoa:
-  mov %r7, 0
-  itoa_loop:
-    rem %r8, %r1, 10
-    add %r8, %r8, 48
-    sb %r2, %r3, 
+print_int:
+  mov %r2, %sp
+  conv_loop:
+    rem %r3, %r1, 10
+    add %r3, %r3, 48
     div %r1, %r1, 10
+    
+    sub %sp, %sp, 1
+    sb %r3, %sp
+
     cmp %r1, 0
-    jgt itoa_loop
+    jne conv_loop
+
+  output_loop:
+    lb %r3, %sp
+    sb %r3, 0xf002
+    add %sp, %sp, 1
+  
+    cmp %r2, %sp
+    jne output_loop
+
+  jmp %ra
