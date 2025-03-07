@@ -19,6 +19,7 @@ impl Window for SerialWindow {
 
   fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui) {
     ui.monospace(String::from_utf8_lossy(&state.serial_out));
+
     ui.separator();
     if egui::TextEdit::singleline(&mut self.input_buf)
       .hint_text("Press enter to send")

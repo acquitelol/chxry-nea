@@ -54,8 +54,8 @@ impl Window for CpuStateWindow {
       ui.label("Last instruction:");
       ui.monospace(state.last_instr.map(|i| i.to_string()).unwrap_or("---".to_string()));
     });
-    ui.separator();
 
+    ui.separator();
     ui.heading("Registers:");
     reg_ui(
       ui,
@@ -72,6 +72,18 @@ impl Window for CpuStateWindow {
       ],
     );
     reg_ui(ui, state, &[Register::PC, Register::SP, Register::RA, Register::STS]);
+
+    ui.separator();
+    ui.horizontal(|ui| {
+      if ui.button("Soft Reset").clicked() {
+        state.emu.soft_reset();
+        state.on_reset();
+      }
+      if ui.button("Full Reset").clicked() {
+        state.emu.reset();
+        state.on_reset();
+      }
+    });
   }
 }
 

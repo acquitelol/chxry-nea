@@ -179,13 +179,19 @@ impl EmuState {
 
     match output.instr {
       Some(i) => self.last_instr = Some(i),
-      None => self.log("Resetting".to_string()),
+      None => self.on_reset(),
     };
     if output.mem_load == Some(addr::SERIAL_IO + 2) {
       self.serial_in_queue.pop_front();
     } else if output.mem_store == Some(addr::SERIAL_IO + 2) {
       self.serial_out.push(self.emu.load_byte(addr::SERIAL_IO + 2));
     }
+  }
+
+  pub fn on_reset(&mut self) {
+    self.log("Resetting".to_string());
+    self.serial_in_queue.clear();
+    self.serial_out.clear();
   }
 
   pub fn log(&mut self, msg: String) {
