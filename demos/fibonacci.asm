@@ -16,13 +16,13 @@ start:
     mov %r3, %r5
 
     inc %r4
-    cmp %r4, 24 ; print the first 24 terms
+    cmp %r4, 24 ; only print first 24 terms, limited by 16bit int limit
     jgt loop
 
   hlt
   jmp start
 
-; write %r1 to the serial port, clobbers %r7-8
+; write %r1 to the serial port, clobbers %r1, %r7, %r8
 print_int:
   mov %r8, %sp
   conv_loop:

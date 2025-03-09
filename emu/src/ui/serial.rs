@@ -23,7 +23,7 @@ impl Window for SerialWindow {
     ui.separator();
     if egui::TextEdit::singleline(&mut self.input_buf)
       .hint_text("Press enter to send")
-      .desired_width(f32::INFINITY)
+      .desired_width(f32::INFINITY) // fill availible space
       .show(ui)
       .response
       .lost_focus()

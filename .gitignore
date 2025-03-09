@@ -1,4 +1,6 @@
 target/
+report/report.pdf
+report/conf.toml
 *.o
 *.bin
 *.q16

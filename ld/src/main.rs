@@ -6,11 +6,11 @@ fn main() {
   let mut args = ArgParser::from_env();
   let out_path = match args.take_flag("-o") {
     Some(p) => p,
-    None => return help(),
+    None => return print_help(),
   };
   let paths = args.remaining();
   if paths.is_empty() {
-    return help();
+    return print_help();
   }
 
   let mut out = Obj::new();
@@ -33,7 +33,7 @@ fn main() {
   }
 }
 
-fn help() {
+fn print_help() {
   println!("q16-ld help:");
   println!("usage: q16-ld [input objects] -o <out binary>");
 }

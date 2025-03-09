@@ -12,6 +12,9 @@ run-%: demos/%.bin q16-emu
 %.o: %.asm q16-asm
 	q16-asm $< -o $@
 
+watch-docs:
+	typst watch --root . report/report.typ
+
 q16-%:
 	cargo build --release --bin $@
 	

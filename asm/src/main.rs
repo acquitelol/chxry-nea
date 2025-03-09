@@ -6,11 +6,11 @@ fn main() {
   let mut args = ArgParser::from_env();
   let out_path = match args.take_flag("-o") {
     Some(p) => p,
-    None => return help(),
+    None => return print_help(),
   };
   let paths = args.remaining();
   if paths.len() != 1 {
-    return help();
+    return print_help();
   }
   let src_path = &paths[0];
 
@@ -30,7 +30,7 @@ fn main() {
   }
 }
 
-fn help() {
+fn print_help() {
   println!("q16-asm help:");
   println!("usage: q16-asm <input file> -o <out object>");
 }

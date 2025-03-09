@@ -10,7 +10,7 @@ use q16::emu::Emulator;
 use q16::util::err;
 
 fn main() {
-  let base = "./tests/tests";
+  let base = "./tests/auto";
   let mut tests = vec![];
   discover_tests(base, &mut tests);
   let total = tests.len();

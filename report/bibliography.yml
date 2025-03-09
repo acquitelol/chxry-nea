@@ -1,0 +1,17 @@
+imgui:
+  type: web
+  title: "Dear ImGui"
+  author: "Omar Cornut"
+  date: 2025
+  url: "https://github.com/ocornut/imgui"
+egui:
+  type: web
+  title: "egui"
+  author: "Emil Ernerfeldt"
+  date: 2025
+  url: "https://github.com/emilk/egui"
+tauri:
+  type: web
+  title: "Tauri"
+  date: 2025
+  url: "https://tauri.app/"

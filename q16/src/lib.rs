@@ -26,28 +26,27 @@ pub enum Register {
   PC, SP, RA, STS
 }
 
-#[rustfmt::skip]
 #[derive(Copy, Clone, PartialEq, Eq, Display, Debug, EnumString, FromRepr)]
 #[strum(serialize_all = "snake_case")]
 #[repr(u32)]
 pub enum Opcode {
-  Add = 0b0000001,
-  Sub = 0b0000010,
-  Mul = 0b0000011,
-  Div = 0b0000100,
-  Rem = 0b0000101,
-  And = 0b0000110,
-  Or  = 0b0000111,
-  Xor = 0b0001000,
-  Lb  = 0b0001001,
-  Lbu = 0b0001010,
-  Lw  = 0b0001011,
-  Sb  = 0b0001100,
-  Sw  = 0b0001101,
-  Jeq = 0b0001110,
-  Jne = 0b0001111,
-  Jgt = 0b0010000,
-  Jlt = 0b0010001,
+  Add,
+  Sub,
+  Mul,
+  Div,
+  Rem,
+  And,
+  Or,
+  Xor,
+  Lb,
+  Lbu,
+  Lw,
+  Sb,
+  Sw,
+  Jeq,
+  Jne,
+  Jgt,
+  Jlt,
 }
 
 impl Opcode {
