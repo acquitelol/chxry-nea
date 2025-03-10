@@ -12,6 +12,12 @@ tauri:
   type: web
   title: "Tauri"
   url: "https://tauri.app"
+riscv:
+  type: web
+  title: "The RISC-V Instruction Set Manual"
+  volume: 1
+  author: ["Andrew Waterman", "Krste Asanovic"]
+  url: "https://lists.riscv.org/g/tech-unprivileged/attachment/536/0/unpriv-isa-asciidoc.pdf"
 astro8:
   type: web
   title: "Astro-8"

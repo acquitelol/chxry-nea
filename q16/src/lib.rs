@@ -115,7 +115,7 @@ impl Instruction {
     self.shared().2
   }
 
-  fn imm(&self) -> Option<u16> {
+  pub fn imm(&self) -> Option<u16> {
     match self {
       Self::I(_, _, _, imm) => Some(*imm),
       Self::R(_, _, _, _) => None,

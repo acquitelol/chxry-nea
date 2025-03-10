@@ -85,8 +85,8 @@ Based on these factors, I opted to use egui for the user interface.
   - A family of RISC architectures mostly used in mobile phones and laptops.
   - Contains Thumb, a subset of instructions used for embedded systems.
   - Load-Store architecture, meaning arithmetic operations can only occur between registers, data from memory must be loaded into a register first.
-- RISC-V
-  - An open source RISC instruct set architecture.
+- RISC-V #cite(<riscv>)
+  - An open source RISC instruction set architecture.
   - Contains different base instruction sets for 32-bit, 64-bit and 128-bit word sizes, along with extensions for feautres like multiplication and floating point.
   - Seperated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
 
@@ -177,41 +177,172 @@ Based on these factors, I opted to use egui for the user interface.
 == Project Structure
 
 This project will contain 5 rust crates,
-- q16: The library where most of the logic is implemented. This is so the emulation and assembly logic can be reused between the emulator and tests. This library also hosts the enums that define the values assigned for each opcode and register.
-- q16-asm: The assembler CLI.
-- q16-ld: The linker CLI. Used to link together multiple object files produced by the assembler.
-- q16-emu: The emulator. A graphical application that can load machine code that has been linked and run programs interactively.
-- q16-tests: An automated test runner that assembles and runs programs and compares the registers to expected outputs.
+- `q16`: The library where most of the logic is implemented. This is so the emulation and assembly logic can be reused between the emulator and tests. This library also hosts the enums that define the values assigned for each opcode and register.
+- `q16-asm`: The assembler CLI.
+- `q16-ld`: The linker CLI. Used to link together multiple object files produced by the assembler.
+- `q16-emu`: The emulator. A graphical application that can load machine code that has been linked and run programs interactively.
+- `q16-tests`: An automated test runner that assembles and runs programs and compares the registers to expected outputs.
 
 == Key Structures
 
+#let snippet(src) = text(size: 10pt, raw(lang: "rust", src))
+
 === `Assembler`
+
+Contains all of the logic necessary for assembling one file.
+
+Members:
+- #snippet("pub obj: Obj") - The output object file.
+Methods:
+- #snippet("pub fn assemble(&mut self, src: &str) -> Result<(), (usize, String)>") - Assemble an entire source file.
+- #snippet("fn assemble_line(&mut self, line: &str) -> Result<(), String>") - Assemble a single line.
+- #snippet("fn assemble_instr(&mut self, mnemonic: &str, operands: Vec<Operand>) -> Result<(), String>") - Output an instruction from the parsed line.
 
 === `Operand`
 
+An enum for the different kinds of operands.
+
+Methods:
+- #snippet("fn parse(s: &'a str) -> Result<Self, String>") - Parse the given string as an operand.
+- #snippet("fn parse_literal(s: &str, radix: u32) -> Result<Self, String>") - Attempt to parse the given string as a literal operand, ignoring the first 2 characters if radix != 2.
+
 === `Obj`
+
+Represents an object file.
+
+Members:
+- #snippet("pub labels: HashMap<String, u16>") - A map of label definitions to their addresses within `data`.
+- #snippet("pub label_uses: Vec<(String, u16)>") - A list of the addresses where labels are used.
+- #snippet("pub data: Vec<u8>") - The raw instruction data.
+
+Methods:
+- #snippet("pub fn load(data: &[u8]) -> Result<Self, String>") - Attempt to load an object from the given data. See @obj_format.
+- #snippet("pub fn insert_label(&mut self, label: String) -> Result<(), String>") - Declare a label at the current position in `data`.
+- #snippet("pub fn insert_label_usage(&mut self, label: String, offset: usize)") - Insert a label usage at the current position in `data` with a given offset.
+- #snippet("pub fn emit_instr(&mut self, instr: Instruction)") - Write the given instruction to `data`.
+- #snippet("pub fn extend(&mut self, other: Self) -> Result<(), String>") - Append another object file to self. Attempts to merge label declarations and errors if this fails.
+- #snippet("pub fn out_obj(self) -> Vec<u8>") - Convert this object to a list of bytes ready to be written to a file in the format given in @obj_format.
+- #snippet("pub fn out_bin(mut self) -> Result<Vec<u8>, String>") - Output the contents of this object to machine code. Attempts to resolve any label usages and errors if this fails.
 
 === `Emulator`
 
-=== `Registers`
+Responsible for emulation logic. Peripherals can be found in @emustate_struct
 
-=== `Instruction`
+Members:
+- #snippet("pub memory: Vec<u8>") - The emulators memory. Should always be 65536 bytes long.
+- #snippet("pub registers: Registers") - Register state.
+
+Methods:
+
+- #snippet("pub fn new() -> Self") - Constructor for the CPU with zeroed memory and registers.
+- #snippet("pub fn set_run(&mut self, run: bool)") - Set the run bit of the `sts` register.
+- #snippet("pub fn running(&mut self) -> bool") - Get the run bit of the `sts` register.
+- #snippet("pub fn cycle(&mut self) -> CycleOutput") - Execute one full cycle of the CPU. `CycleOutput` contains the decoded instruction and any memory loads/stores.
+- #snippet("pub fn reset(&mut self)") - Zero the registers and memory
+- #snippet("pub fn soft_reset(&mut self)") - Zero the registers only.
+- #snippet("pub fn load_word(&self, addr: u16) -> u16") - Load a `u16` from `memory` at the given address. Handles overflow at the last byte.
+- #snippet("pub fn load_byte(&self, addr: u16) -> u8") - Loads a `u8` from `memory` at the given address.
+- #snippet("pub fn store_word(&mut self, addr: u16, x: u16)") - Write a `u16` to `memory` at the given address. Handles overflow at the last byte.
+- #snippet("pub fn store_byte(&mut self, addr: u16, x: u8)") - Write a `u8` to `memory` at the given address.
+- #snippet("pub fn save_state(&self) -> Vec<u8>") - Create a list of bytes containg the emulator state as defined in @emu_state_format.
+- #snippet("pub fn from_state(mut data: Vec<u8>) -> Self") - Load the state from a list of bytes in the format given in @emu_state_format.
 
 === `CircularBuffer`
 
+A circular queue. Used instead of `std::collections::VecDeque` for calculating the average elapsed cycle time.
+
+Members:
+- #snippet("buf: [T; N],") - The raw data. Is initially uninitilized and unsafe to access.
+- #snippet("head: usize") - Head pointer.
+- #snippet("len: usize") - Amount of elements in the queue.
+
+Methods:
+- #snippet("pub fn new() -> Self") - Constructor for an empty queue.
+- #snippet("pub fn clear(&mut self)") - Empty the contents of the queue.
+- #snippet("pub fn len(&self) -> usize") - Returns the amount of elements in the queue.
+- #snippet("pub fn push(&mut self, item: T)") - Enqueue an element. Will overwrite the oldest element if the queue is full.
+- #snippet("pub fn items(&self) -> &[T]") - Return the contents of the queue.
+
+
 === `ArgParser`
 
-=== `EmuState`
+Utility for parsing command line arguments.
+
+Members:
+- #snippet("args: Vec<String>") - A list of all arguments that haven't been handled.
+
+Methods:
+- #snippet("pub fn from_env() -> Self") - Construct from the arguments passed to the CLI.
+- #snippet("pub fn take_flag(&mut self, flag: &str) -> Option<String>") - Get the argument following `flag` if it exists. Removes both the flag and content from `args`.
+- #snippet("pub fn remaining(self) -> Vec<String>") - Returns any unhandled arguments.
+
+=== `EmuState` <emustate_struct>
+
+Responsible for scheduling the CPU cycles and managing serial input.
+
+Members:
+- #snippet("emu: Emulator") - The internal emulator.
+- #snippet("last_instr: Option<Instruction>") - The last decoded instruction.
+- #snippet("target_speed: u64") - The target CPU frequency in Hertz.
+- #snippet("time_history: CircularBuffer<Duration, 100_000>") - A circular buffer containing the time it took for the last 100000 CPU cycles.
+- #snippet("msg_log: Vec<(OffsetDateTime, String)>") - A log for messages to be shown to the user.
+- #snippet("serial_in_queue: VecDeque<u8>") - A queue containing serial input that is yet to be sent to the CPU.
+- #snippet("serial_out: Vec<u8>") - Any serial output from the CPU.
+
+Methods:
+- #snippet("pub fn load_binary<P: AsRef<Path>>(&mut self, path: P)") - Load a binary from the given filepath into position 0 in the emulators memory.
+- #snippet("pub fn load_state<P: AsRef<Path>>(&mut self, path: P)") - Load the emulator state from the given filepath.
+- #snippet("pub fn save_state<P: AsRef<Path>>(&mut self, path: P) ") - Save the emulator state to the given file path.
+- #snippet("pub fn cycle(&mut self)") - Cycle the CPU and process any IO events as necessary.
+- #snippet("pub fn on_reset(&mut self)") - Reset the serial IO.
+- #snippet("pub fn log(&mut self, msg: String)") - Write a log message.
 
 === `App`
 
+Manages UI windows. Notably implements `eframe::App` which is required for UI rendering.
+
+Members:
+- #snippet("emu_state: Arc<Mutex<EmuState>>") - The internal emulator state. Wrapped in a mutex so it can be accessed from both the UI and emulation threads.
+- #snippet("windows: Vec<Box<dyn Window>>") - List of the windows that can possibly be displayed.
+
+Methods:
+- #snippet("fn new(cc: &eframe::CreationContext) -> Self") - Initialize the application, spawning the emulation thread.
+- #snippet("fn for_windows<F: FnMut(Arc<Mutex<EmuState>>, &mut dyn Window, &mut bool)>(&mut self, ctx: &egui::Context, mut f: F)") - Internal utility to run the given closure for every window.
+- #snippet("fn file_button<P: Fn() -> Option<PathBuf> + Send + 'static, A: Fn(Arc<Mutex<EmuState>>, PathBuf) + Send + 'static>(&self, picker: P, action: A)") - Internal utility for the shared logic between file menu buttons. Spawns another thread to execute `picker` in order to not block the UI thread.
+- #snippet("fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame)") - Ran every frame. Renders the user interface.
+
+=== `Window`
+
+Trait (similar to an interface in other languages) implemented for every window struct.
+
+Methods:
+- #snippet("fn build<'a>(&self, window: egui::Window<'a>) -> egui::Window<'a>") - Allows any modifications to be made to the `egui::Window` if necessary.
+- #snippet("fn name(&self) -> &'static str") - Returns the name of the window. Should be kept constant (Not an associated constant due to how Rust deals with dynamic dispatch).
+- #snippet("fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui)") - Ran every frame. Renders the UI for that window.
+
 == File Formats
 
-=== Object File
+=== Object File <obj_format>
 
-=== Emulator State File
+=== Emulator State File <emu_state_format>
 
 == UI Design
+
+// TODO YAP OVERALL DESIGN
+
+=== CPU State Window
+
+This window allows the user to inspect and edit registers and control the how the CPU runs.
+#figure(caption: [Memory editor window mockup.], image("ui_state.png"))
+
+=== Memory Window
+
+The design of the memory window is inspired by other hex editors, however without the ASCII section.
+#figure(caption: [Memory editor window mockup.], image("ui_memory.png"))
+
+=== Display Window
+
+=== Serial Window
 
 == Instruction set
 
@@ -347,34 +478,33 @@ Many assembly instructions are implemented using other instructions.
 
 == Source Code
 
-#let sourcecode(lang: "rust", path) = [
+#let sourcecode(lang: "rust", desc: "", path) = [
   #set par(justify: false)
   === #raw(path)
+  #desc
   #zebraw(lang: false, text(10pt, raw(lang: lang, block: true, read("../" + path))))
 ]
 
-// todo have descriptions for the files and crates
-#sourcecode("q16/src/lib.rs")
-#sourcecode("q16/src/asm.rs")
-#sourcecode("q16/src/obj.rs")
-#sourcecode("q16/src/emu.rs")
-#sourcecode("q16/src/util.rs")
-#sourcecode("asm/src/main.rs")
-#sourcecode("ld/src/main.rs")
-#sourcecode("emu/src/main.rs")
-#sourcecode("emu/src/ui/mod.rs")
-#sourcecode("emu/src/ui/cpu_state.rs")
-#sourcecode("emu/src/ui/memory.rs")
-#sourcecode("emu/src/ui/display.rs")
-#sourcecode("emu/src/ui/serial.rs")
-#sourcecode("emu/src/ui/log.rs")
-#sourcecode("tests/src/main.rs")
-
-#sourcecode(lang: "asm", "demos/base.asm")
-#sourcecode(lang: "asm", "demos/mandelbrot.asm")
-#sourcecode(lang: "asm", "demos/gameoflife.asm")
-#sourcecode(lang: "asm", "demos/fibonacci.asm")
-#sourcecode(lang: "asm", "demos/echo.asm")
+#sourcecode(desc: "Main definitions for the instruction set and instruction parsing.", "q16/src/lib.rs")
+#sourcecode(desc: "Main assembler implementation.", "q16/src/asm.rs")
+#sourcecode(desc: "Object file manipulation.", "q16/src/obj.rs")
+#sourcecode(desc: "Main emulator implementation.", "q16/src/emu.rs")
+#sourcecode(desc: "Utility functions and types.", "q16/src/util.rs")
+#sourcecode(desc: "Assembler CLI entry point.", "asm/src/main.rs")
+#sourcecode(desc: "Linker CLI entry point.", "ld/src/main.rs")
+#sourcecode(desc: "Emulator application initilization.", "emu/src/main.rs")
+#sourcecode(desc: "Emulator window organization.", "emu/src/ui/mod.rs")
+#sourcecode(desc: "CPU state window.", "emu/src/ui/cpu_state.rs")
+#sourcecode(desc: "Memory editor window.", "emu/src/ui/memory.rs")
+#sourcecode(desc: "Virtual display window.", "emu/src/ui/display.rs")
+#sourcecode(desc: "Serial console window.", "emu/src/ui/serial.rs")
+#sourcecode(desc: "Message log window.", "emu/src/ui/log.rs")
+#sourcecode(desc: "Automated test runner.", "tests/src/main.rs")
+#sourcecode(desc: "Entry point for demo applications.", lang: "asm", "demos/base.asm")
+#sourcecode(desc: "Draws the mandelbrot set to the virtual display.", lang: "asm", "demos/mandelbrot.asm")
+#sourcecode(desc: "Simulates Conway's Game of Life on the virtual display.", lang: "asm", "demos/gameoflife.asm")
+#sourcecode(desc: "Prints the first 24 Fibonacci terms to the serial console.", lang: "asm", "demos/fibonacci.asm")
+#sourcecode(desc: "Echos user input in the serial console.", lang: "asm", "demos/echo.asm")
 
 = Testing
 
