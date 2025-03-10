@@ -36,7 +36,7 @@
 == Project Outline
 
 I plan to create a set of tools for programming with a custom instruction set, including an assembler and an interactive virtual machine. The goal is to make learning low level programming more approachable, by eliminating the complexity of modern computer architectures. The design and tooling for this instruction set will be based on real-life designs in order to make the skills learnt by the user transferrable to real technologies.
-// one more para probably? demo programs
+// TODO one more para probably? demo programs
 
 == Client Information
 
@@ -72,11 +72,39 @@ For the user interface, the client opted for a cross-platform desktop applicatio
   - Data has to be constantly serialized and sent between the UI Javascript and the internal rust emulation code.
 Based on these factors, I opted to use egui for the user interface.
 
-// - Existing architectures
-//   - x86 - A family of very complex architectures used in most desktop PC's.
-//   - Arm - A family of RISC architectures, used for mobile platforms and some new laptops. // something something colpex
-//   - RISC-V - Open source, lots of functionality is split into extensions, making the base spec much simpler than arm.
-  // write way more here
+=== Existing Architectures
+
+// TODO citations here
+- x86
+  - A family of very complex architectures used in most desktop PC's.
+  - Based on the Intel 8086 microprocessor released in 1978, and has evolved ever since.
+  - Has different operating modes to be able to use 16-bit, 32-bit and 64-bit word sizes.
+  - Contains many extensions to enable extra functionality like SIMD and floating point support.
+  - Instruction-Memory architecture, meaning operations can be performed on memory locations as well as registers.
+- Arm
+  - A family of RISC architectures mostly used in mobile phones and laptops.
+  - Contains Thumb, a subset of instructions used for embedded systems.
+  - Load-Store architecture, meaning arithmetic operations can only occur between registers, data from memory must be loaded into a register first.
+- RISC-V
+  - An open source RISC instruct set architecture.
+  - Contains different base instruction sets for 32-bit, 64-bit and 128-bit word sizes, along with extensions for feautres like multiplication and floating point.
+  - Seperated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
+
+=== Similar Implementations
+
+- ASTRO-8 #cite(<astro8>)
+  - An emulator and assembler for a 16-bit computer design.
+  - Supports many different IO methods, including a virtual display, keyboard and mouse input and sound output.
+  - Only has 3 general purpose registers, however supports multiple memory banks.
+  - The emulator is a desktop app with a seperate assembler program.
+  - The emulator only shows the display output, and provides no debugging information.
+- yasp #cite(<yasp>)
+  - A web based assembler development environment.
+  - Simulates different hardware devices (LEDs, buttons etc.).
+  - The code writing experience is interactive, with live error checking and helpful information when hovering instructions.
+  - Has a big focus on debugging, with breakpoints and the ability to step forward and backward through instructions.
+  - Can only run at \~25 KHz.
+  - #figure(caption: [The yasp user interface, showing the assembly code next to the debugger output.], image("yasp.png"))
 
 == Objectives
 
@@ -127,6 +155,7 @@ Based on these factors, I opted to use egui for the user interface.
     + There should be a button to step the CPU forward one cycle.
     + There should be a way to vary the execution speed of the CPU.
     + This window should display if the CPU is currently active or not.
+    + This window should show the the decoded string of the last instruction.
   + There should be a window to display the CPU registers.
     + Whilst the emulation is paused, the register values should be editable by the user.
     + It should verify whether the inputted value is valid for the base the number is in.
@@ -145,11 +174,51 @@ Based on these factors, I opted to use egui for the user interface.
 
 = Documented Design
 
+== Project Structure
+
+This project will contain 5 rust crates,
+- q16: The library where most of the logic is implemented. This is so the emulation and assembly logic can be reused between the emulator and tests. This library also hosts the enums that define the values assigned for each opcode and register.
+- q16-asm: The assembler CLI.
+- q16-ld: The linker CLI. Used to link together multiple object files produced by the assembler.
+- q16-emu: The emulator. A graphical application that can load machine code that has been linked and run programs interactively.
+- q16-tests: An automated test runner that assembles and runs programs and compares the registers to expected outputs.
+
+== Key Structures
+
+=== `Assembler`
+
+=== `Operand`
+
+=== `Obj`
+
+=== `Emulator`
+
+=== `Registers`
+
+=== `Instruction`
+
+=== `CircularBuffer`
+
+=== `ArgParser`
+
+=== `EmuState`
+
+=== `App`
+
+== File Formats
+
+=== Object File
+
+=== Emulator State File
+
+== UI Design
+
 == Instruction set
-_q16_ is a 16-bit, little-endian RISC instruction set designed for this project. It is inspired heavily by RISC-V. This section exists as a reference for implementation, and a guide for the end user.
+
+q16 is a 16-bit, little-endian RISC instruction set designed for this project. It is inspired heavily by RISC-V. This section exists as a reference for implementation, and a guide for the end user.
 
 === Registers
-There are 14 programmer available registers, all of which are 16-bit. Registers are referenced in instructions using 4-bit identifiers.
+There are 13 programmer available registers, all of which are 16-bit. Registers are referenced in instructions using 4-bit identifiers.
 #figure(
   table(
     columns: 3,
@@ -274,6 +343,8 @@ Many assembly instructions are implemented using other instructions.
 
 == Skills Demonstrated
 
+// TODO
+
 == Source Code
 
 #let sourcecode(lang: "rust", path) = [
@@ -306,6 +377,7 @@ Many assembly instructions are implemented using other instructions.
 #sourcecode(lang: "asm", "demos/echo.asm")
 
 = Testing
+
 // TODO WRITE STATUS REGISTER TEST
 
 = Evaluation

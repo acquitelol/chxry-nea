@@ -2,16 +2,23 @@ imgui:
   type: web
   title: "Dear ImGui"
   author: "Omar Cornut"
-  date: 2025
   url: "https://github.com/ocornut/imgui"
 egui:
   type: web
   title: "egui"
   author: "Emil Ernerfeldt"
-  date: 2025
   url: "https://github.com/emilk/egui"
 tauri:
   type: web
   title: "Tauri"
-  date: 2025
-  url: "https://tauri.app/"
+  url: "https://tauri.app"
+astro8:
+  type: web
+  title: "Astro-8"
+  author: "sam-astro"
+  url: "https://sam-astro.github.io/Astro8-Computer"
+yasp:
+  type: web
+  title: "yasp"
+  author: "Michael Lutonsky"
+  url: "https://yasp.me"

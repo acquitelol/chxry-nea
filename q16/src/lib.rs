@@ -30,7 +30,7 @@ pub enum Register {
 #[strum(serialize_all = "snake_case")]
 #[repr(u32)]
 pub enum Opcode {
-  Add,
+  Add = 1,
   Sub,
   Mul,
   Div,
