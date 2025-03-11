@@ -1,3 +1,7 @@
+ffmpeg:
+  type: web
+  title: "FFmpeg Developer Documentation"
+  url: "https://www.ffmpeg.org/developer.html"
 imgui:
   type: web
   title: "Dear ImGui"

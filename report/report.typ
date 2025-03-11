@@ -5,12 +5,7 @@
 #set heading(numbering: "1.")
 #set enum(numbering: "1.", full: true)
 #show link: underline
-#show ref: it => {
-  let el = it.element
-  if el != none {
-    link(el.location(), [#numbering(el.numbering, ..counter(el.func()).at(el.location())) #el.body])
-  }
-}
+#show ref: underline
 
 #page(numbering: none, [
   #v(2fr)
@@ -26,7 +21,7 @@
   ])
 ])
 
-#set par(justify: true)
+// #set par(justify: true)
 #set page(margin: 2cm, footer: [*Centre Number:* #details.center_num #h(1fr) #context counter(page).display("1") #h(1fr) *Candidate Number:* #details.candidate_num])
 
 #page(outline(indent: true))
@@ -36,7 +31,12 @@
 == Project Outline
 
 I plan to create a set of tools for programming with a custom instruction set, including an assembler and an interactive virtual machine. The goal is to make learning low level programming more approachable, by eliminating the complexity of modern computer architectures. The design and tooling for this instruction set will be based on real-life designs in order to make the skills learnt by the user transferrable to real technologies.
-// TODO one more para probably? demo programs
+
+An assembler is a tool used to compile programs written in assembly. This is the most basic form of a programming language, where the instructions in the language correspond almost directly to the instructions in the architecture. Knowing how to write assembly programs may seem redundant with modern compilers, however many multimedia processing programs like FFmpeg and dav1d @ffmpeg use handwritten assembly for performance critical functions.
+
+The assembler will compile one file at a time into object files, meaning a linker is required to combine multiple object files. The linker is also responsible for resolving labels, which are names that identify a location in memory. The linker will finally output a binary file that can be executed as machine code by the emulator.
+
+For this project I also will write a small collection of programs to demonstrate the functionality of the assembly language and the emulator.
 
 == Client Information
 
@@ -57,19 +57,19 @@ When asked about user interface, the client wanted the UI to be modular, with a 
 For all of the components I have chosen to use the Rust programming language for its high performance. This was especially a consideration for the emulator, as the virtual machine needs to be able to run at the clients target speed of at least 1 MHz, meaning each cycle has to be executed in under 1 #(sym.mu)s.
 
 For the user interface, the client opted for a cross-platform desktop application, leaving different choices of how to implement the user interface.
-- Dear ImGui #cite(<imgui>)
-  - Implemented in C++, however there are Rust bindings availible.
+- Dear ImGui @imgui
+  - Implemented in C++, however there are Rust bindings available.
   - Immediate mode UI, meaning each frame the UI is reconstructed based on the current state. This means no state has to be synchronised between UI elements and the backing data.
   - Widely used and documented.
   - Would require implementing a backend to draw the outputted vertex data; I could reuse the rendering backend from my EPQ for this.
-- egui #cite(<egui>)
+- egui @egui
   - Implemented in Rust, meaning the API will be more ergonomic to use.
   - Immediate mode with a similar API to ImGui.
-  - Also includes eframe, a cross platform backend.
-- Tauri #cite(<tauri>)
+  - Also includes eframe, a cross-platform backend.
+- Tauri @tauri
   - A framework for building desktop applications using web technologies, similar to electron.
   - Using css to design the UI allows more flexibility than immediate mode libraries.
-  - Data has to be constantly serialized and sent between the UI Javascript and the internal rust emulation code.
+  - Data must be constantly serialized and sent between the UI Javascript and the internal rust emulation code.
 Based on these factors, I opted to use egui for the user interface.
 
 === Existing Architectures
@@ -77,7 +77,7 @@ Based on these factors, I opted to use egui for the user interface.
 // TODO citations here
 - x86
   - A family of very complex architectures used in most desktop PC's.
-  - Based on the Intel 8086 microprocessor released in 1978, and has evolved ever since.
+  - Based on the Intel 8086 microprocessor released in 1978 and has evolved ever since.
   - Has different operating modes to be able to use 16-bit, 32-bit and 64-bit word sizes.
   - Contains many extensions to enable extra functionality like SIMD and floating point support.
   - Instruction-Memory architecture, meaning operations can be performed on memory locations as well as registers.
@@ -85,20 +85,20 @@ Based on these factors, I opted to use egui for the user interface.
   - A family of RISC architectures mostly used in mobile phones and laptops.
   - Contains Thumb, a subset of instructions used for embedded systems.
   - Load-Store architecture, meaning arithmetic operations can only occur between registers, data from memory must be loaded into a register first.
-- RISC-V #cite(<riscv>)
+- RISC-V @riscv
   - An open source RISC instruction set architecture.
-  - Contains different base instruction sets for 32-bit, 64-bit and 128-bit word sizes, along with extensions for feautres like multiplication and floating point.
-  - Seperated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
+  - Contains different base instruction sets for 32-bit, 64-bit and 128-bit word sizes, along with extensions for features like multiplication and floating point.
+  - Separated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
 
 === Similar Implementations
 
-- ASTRO-8 #cite(<astro8>)
+- ASTRO-8 @astro8
   - An emulator and assembler for a 16-bit computer design.
   - Supports many different IO methods, including a virtual display, keyboard and mouse input and sound output.
   - Only has 3 general purpose registers, however supports multiple memory banks.
-  - The emulator is a desktop app with a seperate assembler program.
-  - The emulator only shows the display output, and provides no debugging information.
-- yasp #cite(<yasp>)
+  - The emulator is a desktop app with a separate assembler program.
+  - The emulator only shows the display output and provides no debugging information.
+- yasp @yasp
   - A web based assembler development environment.
   - Simulates different hardware devices (LEDs, buttons etc.).
   - The code writing experience is interactive, with live error checking and helpful information when hovering instructions.
@@ -144,7 +144,7 @@ Based on these factors, I opted to use egui for the user interface.
   + The emulator should be able to save its registers and memory to a file.
   + The emulator should be able to load its registers and memory from a file.
   + The state of the CPU and memory should be able to be saved/loaded from a file.
-  + The emulator should execute execute the instruction at the virtual program counter if it is unpaused or the user requested to step 1 instruction.
+  + The emulator should execute the instruction at the virtual program counter if it is unpaused or the user requested to step 1 instruction.
     + It should decode the instruction at the program counter.
     + If the decoded opcode is invalid, #strike([an interrupt should be raised]) the register state should be reset.
     + The decoded instruction should be executed, and the registers and memory should be updated accordingly.
@@ -183,13 +183,21 @@ This project will contain 5 rust crates,
 - `q16-emu`: The emulator. A graphical application that can load machine code that has been linked and run programs interactively.
 - `q16-tests`: An automated test runner that assembles and runs programs and compares the registers to expected outputs.
 
+== Libraries Used
+
+- #link("https://crates.io/crates/egui")[egui]/#link("https://crates.io/crates/eframe")[eframe] - UI Rendering
+- #link("https://crates.io/crates/rfd")[rfd] - Opening native file dialog menus.
+- #link("https://crates.io/crates/time")[time] - Retrieving and formatting timestamps. Used in the log window.
+- #link("https://crates.io/crates/owo-colors")[owo-colors] - Printing colours to the console.
+- #link("https://crates.io/crates/regex")[regex] - Regular expressions used for parsing automated test files.
+
 == Key Structures
 
 #let snippet(src) = text(size: 10pt, raw(lang: "rust", src))
 
 === `Assembler`
 
-Contains all of the logic necessary for assembling one file.
+Contains all of the logic necessary for assembling a file.
 
 Members:
 - #snippet("pub obj: Obj") - The output object file.
@@ -252,7 +260,7 @@ Methods:
 A circular queue. Used instead of `std::collections::VecDeque` for calculating the average elapsed cycle time.
 
 Members:
-- #snippet("buf: [T; N],") - The raw data. Is initially uninitilized and unsafe to access.
+- #snippet("buf: [T; N]") - The raw data. Is initially uninitilized and unsafe to access.
 - #snippet("head: usize") - Head pointer.
 - #snippet("len: usize") - Amount of elements in the queue.
 
@@ -320,35 +328,51 @@ Methods:
 - #snippet("fn name(&self) -> &'static str") - Returns the name of the window. Should be kept constant (Not an associated constant due to how Rust deals with dynamic dispatch).
 - #snippet("fn show(&mut self, state: &mut EmuState, ui: &mut egui::Ui)") - Ran every frame. Renders the UI for that window.
 
+== Key Algorithms
+
+=== Emulation thread
+
+The emulation and UI rendering run on different threads in order to enable the emulation to run at speeds higher than the refresh rate of the user's display. This means that the `EmuState` must be wrapped in an `Arc` (reference counted pointer) to be sent across threads, and a `Mutex` to allow multiple threads to access the state by locking access to only one thread at a time. \
+The scheduler keeps track of time to be carried forward, in the cases that the last cycle took too long to execute, for example when the UI thread locks the mutex during rendering. Implementing this raised the maximum achievable emulation speed from \~10 MHz to \~25 MHz on an Apple M2 processor.
+
+// TODO SCALE CORRECTLY
+#figure(caption: [The emulation thread scheduling algorithm], image(width: 60%, "emu_thread.png"))
+
 == File Formats
+
+All values saved are stored in little endian and packed continuously without padding.
 
 === Object File <obj_format>
 
+All object files must begin with the bytes `[113, 49, 54]`, corresponding to "q16" in ASCII. \
+This is followed by 2 tables containing label information. Each table starts with a 16-bit integer representing the number of entries in the table. The rest of the table contains null-terminated UTF-8 strings, each followed by a 16-bit integer. \
+The first table is a map of label definitions to their address relative to the start of this files object code, and the second is a map containing label usages, and where the linker should insert the corresponding address into the machine code. \
+The rest of the file contains the assembler output.
+
 === Emulator State File <emu_state_format>
+
+The first 65,536 ($2^16 + 1$) bytes of the state file are the contents of the emulator memory. The rest of the file contains the registers, each represented as 16-bit integer, stored in the order defined in @regtable.
 
 == UI Design
 
-// TODO YAP OVERALL DESIGN
+The UI will consist of windows that can be rearranged by the user and managed from a menu at the top of the screen. There will also be a File menu for loading/restoring the emulator state.
 
 === CPU State Window
 
 This window allows the user to inspect and edit registers and control the how the CPU runs.
-#figure(caption: [Memory editor window mockup.], image("ui_state.png"))
+#figure(caption: [CPU state window mockup], image(width: 70%, "ui_state.png"))
 
 === Memory Window
 
-The design of the memory window is inspired by other hex editors, however without the ASCII section.
-#figure(caption: [Memory editor window mockup.], image("ui_memory.png"))
-
-=== Display Window
-
-=== Serial Window
+The memory window is inspired by the designs of other hex editors, however without an ASCII section.
+#figure(caption: [Memory editor window mockup], image(width: 70%, "ui_memory.png"))
 
 == Instruction set
 
 q16 is a 16-bit, little-endian RISC instruction set designed for this project. It is inspired heavily by RISC-V. This section exists as a reference for implementation, and a guide for the end user.
 
 === Registers
+
 There are 13 programmer available registers, all of which are 16-bit. Registers are referenced in instructions using 4-bit identifiers.
 #figure(
   table(
@@ -362,7 +386,7 @@ There are 13 programmer available registers, all of which are 16-bit. Registers 
     [`1100`], [`sts`], [Status register.]
   ),
   caption: [List of registers]
-)
+) <regtable>
 The contents of the status register are defined as follows.
 #figure(
   table(
@@ -378,6 +402,7 @@ The contents of the status register are defined as follows.
 )
 
 === Instruction Format
+
 All instructions are 32 bits long, with the first 8 bits representing the opcode. The most significant bit of the opcode denotes the instruction format. The base instruction formats are shown with the least significant bit first.
 
 #let instrformat(cells) = grid(
@@ -445,11 +470,11 @@ All instructions are 32 bits long, with the first 8 bits representing the opcode
   ),
   caption: [List of opcodes]
 )
-The branching instructions use the value in the `sts` register, and are designed to be used with the `cmp` pseudo-instruction, although this is not necessarily required. For the memory and branching operations, either one of `r1` or `imm` can be omitted.
+The branching instructions use the value in the `sts` register and are designed to be used with the `cmp` pseudo-instruction, although this is not necessarily required. For the memory and branching operations, either one of `r1` or `imm` can be omitted.
 
-// move to assembly section along with instruction format usages
 === Pseudo Instructions
-Many assembly instructions are implemented using other instructions. 
+
+Many assembly instructions are implemented using other instructions. The `.db` and `.dw` instructions can also be used to insert values directly into the machine code, and the `.skip` instruction to insert n 0s into the machine code.
 
 #figure(
   table(
@@ -479,7 +504,7 @@ Many assembly instructions are implemented using other instructions.
 == Source Code
 
 #let sourcecode(lang: "rust", desc: "", path) = [
-  #set par(justify: false)
+  // #set par(justify: false)
   === #raw(path)
   #desc
   #zebraw(lang: false, text(10pt, raw(lang: lang, block: true, read("../" + path))))
@@ -507,8 +532,6 @@ Many assembly instructions are implemented using other instructions.
 #sourcecode(desc: "Echos user input in the serial console.", lang: "asm", "demos/echo.asm")
 
 = Testing
-
-// TODO WRITE STATUS REGISTER TEST
 
 = Evaluation
 
