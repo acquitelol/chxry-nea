@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use eframe::egui;
 use time::OffsetDateTime;
 use q16::{Instruction, addr};
-use q16::emu::Emulator;
+use q16::emu::{Emulator, MEM_LEN};
 use q16::util::{CircularBuffer, ArgParser};
 use crate::ui::{Window, CpuStateWindow, MemoryWindow, DisplayWindow, SerialWindow, LogWindow};
 
@@ -143,13 +143,13 @@ impl EmuState {
 
   pub fn load_binary<P: AsRef<Path>>(&mut self, path: P) {
     match fs::read(&path) {
-      Ok(bin) => {
+      Ok(bin) if bin.len() <= MEM_LEN => {
         self.emu.reset();
         self.emu.memory.splice(..bin.len(), bin);
         self.last_instr = None;
         self.log(format!("Loaded binary from '{}'.", path.as_ref().display()));
       }
-      Err(_) => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
+      _ => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
     };
   }
 

@@ -9,17 +9,21 @@ use q16::asm::Assembler;
 use q16::emu::Emulator;
 use q16::util::err;
 
+const BASE_DIR: &str = "./tests/auto";
+
 fn main() {
-  let base = "./tests/auto";
   let mut tests = vec![];
-  discover_tests(base, &mut tests);
+  discover_tests(BASE_DIR, &mut tests);
   let total = tests.len();
   println!("running {} tests", total);
 
   let mut fails = 0;
   let start = Instant::now();
   for path in tests {
-    print!("test {} ... ", path.strip_prefix(base).unwrap().display().bright_white().italic());
+    print!(
+      "test {} ... ",
+      path.strip_prefix(BASE_DIR).unwrap().display().bright_white().italic()
+    );
     match run_test(&path) {
       Ok(_) => println!("{}", "pass".green().bold()),
       Err(e) => {

@@ -32,7 +32,7 @@
 
 I plan to create a set of tools for programming with a custom instruction set, including an assembler and an interactive virtual machine. The goal is to make learning low level programming more approachable, by eliminating the complexity of modern computer architectures. The design and tooling for this instruction set will be based on real-life designs in order to make the skills learnt by the user transferrable to real technologies.
 
-An assembler is a tool used to compile programs written in assembly. This is the most basic form of a programming language, where the instructions in the language correspond almost directly to the instructions in the architecture. Knowing how to write assembly programs may seem redundant with modern compilers, however many multimedia processing programs like FFmpeg and dav1d @ffmpeg use handwritten assembly for performance critical functions.
+An assembler is a compiler for programs written in assembly. This is the most primitive form of a programming language, where the instructions in the language correspond almost directly to the instructions in the architecture. Knowing how to write assembly programs may seem redundant with modern compilers, however many multimedia processing programs like FFmpeg and dav1d @ffmpeg use handwritten assembly for performance critical functions.
 
 The assembler will compile one file at a time into object files, meaning a linker is required to combine multiple object files. The linker is also responsible for resolving labels, which are names that identify a location in memory. The linker will finally output a binary file that can be executed as machine code by the emulator.
 
@@ -48,7 +48,7 @@ The client is Gosha Tnimov, a student of computer science interested in low-leve
 - The emulator should have a virtual display to write graphical programs.
 - There should be a way to send keyboard input to the CPU.
 - The toolchain should be shipped with a package of sample programs.
-When asked about user interface, the client wanted the UI to be modular, with a way to arrange windows containing different information.
+When asked about user interface, the client wanted the UI to be modular, with a way to arrange windows containing different information. 
 
 == Initial Research
 
@@ -154,6 +154,7 @@ Based on these factors, I opted to use egui for the user interface.
     + There should be a button to pause/resume the CPU execution based on current state.
     + There should be a button to step the CPU forward one cycle.
     + There should be a way to vary the execution speed of the CPU.
+    + The execution speed should be able to be set to at least 1 MHz.
     + This window should display if the CPU is currently active or not.
     + This window should show the the decoded string of the last instruction.
   + There should be a window to display the CPU registers.
@@ -167,6 +168,7 @@ Based on these factors, I opted to use egui for the user interface.
   + There should be a window to view a virtual display.
     + The data for the display should be mapped to a region in the emulated memory.
     + #strike([With this window selected, any keyboard inputs should be sent to the CPU as interrupts.])
+    + The window should show the color data and coordinates of the hovered pixel.
   + There should be a window to interact with a virtual serial port.
     + The user should be able to type in an a message, which will be then encoded as UTF-8 and queued to be sent to the CPU.
     + If the emulated program reads from a specific address, the value read should be popped from the queue.
@@ -335,12 +337,11 @@ Methods:
 The emulation and UI rendering run on different threads in order to enable the emulation to run at speeds higher than the refresh rate of the user's display. This means that the `EmuState` must be wrapped in an `Arc` (reference counted pointer) to be sent across threads, and a `Mutex` to allow multiple threads to access the state by locking access to only one thread at a time. \
 The scheduler keeps track of time to be carried forward, in the cases that the last cycle took too long to execute, for example when the UI thread locks the mutex during rendering. Implementing this raised the maximum achievable emulation speed from \~10 MHz to \~25 MHz on an Apple M2 processor.
 
-// TODO SCALE CORRECTLY
 #figure(caption: [The emulation thread scheduling algorithm], image(width: 60%, "emu_thread.png"))
 
 == File Formats
 
-All values saved are stored in little endian and packed continuously without padding.
+All values saved are stored in little endian and packed contiguously without padding.
 
 === Object File <obj_format>
 
@@ -499,11 +500,24 @@ Many assembly instructions are implemented using other instructions. The `.db` a
 
 == Skills Demonstrated
 
-// TODO
+// TODO complete
+#table(
+  columns: (auto, 0.4fr, 1fr),
+  [*Group*], [*Skill*], [*Location*], 
+  [A], [Hash Tables], [`q16/src/obj.rs`],
+  [A], [List operations], [Everywhere where `Vec` is used],
+  [A], [Queue operations], [`emu/src/main.rs:172`\ `emu/src/ui/serial.rs`\ `q16/src/util.rs:19`],
+  [A], [Stack operations], [`demos/fibonacci.asm:33`\ `tests/auto/programs/factorial.asm`],
+  [A], [Interfaces], [`emu/src/ui/mod.rs:16`\ `emu/src/main.rs:56`],
+  [A], [Recursive algorithms], [`tests/src/main.rs:45`\ `tests/auto/programs/factorial.asm`],
+  [B], [File access], [`asm/src/main.rs`\ `ld/src/main.rs`\ `emu/src/main.rs:144`],
+  [B], [Bubble Sort], [`tests/auto/programs/bubble_sort.asm`],
+  [B], [Records], [All `struct` definitions],
+)
 
 == Source Code
 
-#let sourcecode(lang: "rust", desc: "", path) = [
+#let sourcecode(lang: "rust", desc: "",  path) = [
   // #set par(justify: false)
   === #raw(path)
   #desc
@@ -532,6 +546,46 @@ Many assembly instructions are implemented using other instructions. The `.db` a
 #sourcecode(desc: "Echos user input in the serial console.", lang: "asm", "demos/echo.asm")
 
 = Testing
+
+== Testing table
+
+// TODO
+
+== Automated tests
+
+The `q16-tests` package allows automatically assembling and emulating programs, and verifying the outputs based on comments in the source file. This is used for testing the core functionality. Every time the CPU is halted, the test runner will verify the contents of the registers with the next occurance of a string with a pattern `;assert r3=36 r4=92 ...`.
+
+These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.5.
+
+#let testcode(path) = [
+  - #raw(path)
+    #zebraw(lang: false, text(10pt, raw(lang: "asm", block: true, read("../tests/auto/" + path))))
+]
+
+#testcode("literals.asm")
+#testcode("branching.asm")
+#testcode("registers.asm")
+#testcode("invalid_instr.asm")
+#testcode("mem/loads.asm")
+#testcode("mem/stores.asm")
+#testcode("mem/boundary.asm")
+#testcode("instructions/add.asm")
+#testcode("instructions/sub.asm")
+#testcode("instructions/mul.asm")
+#testcode("instructions/div.asm")
+#testcode("instructions/rem.asm")
+#testcode("instructions/and.asm")
+#testcode("instructions/or.asm")
+#testcode("instructions/xor.asm")
+#testcode("programs/factorial.asm")
+#testcode("programs/bubble_sort.asm")
+
+#figure(image(width: 70%, "autotests.png"))
+
+== Rust unit tests
+
+Unit tests for internal utilities can be found at `q16/src/util.rs:100`. These all pass.
+#figure(image(width: 70%, "unittests.png"))
 
 = Evaluation
 

@@ -1,7 +1,7 @@
 use strum::IntoEnumIterator;
 use crate::{Register, Opcode, Instruction, sts};
 
-const MEM_LEN: usize = u16::MAX as usize + 1;
+pub const MEM_LEN: usize = u16::MAX as usize + 1;
 
 pub struct Emulator {
   pub memory: Vec<u8>,
