@@ -8,6 +8,7 @@ use std::fmt;
 use strum::{EnumString, EnumIter, FromRepr, Display};
 
 pub mod sts {
+  // the indices of bits in the sts register
   pub const ZERO: u16 = 0;
   pub const NEG: u16 = 1;
   pub const RUN: u16 = 8;

@@ -116,7 +116,7 @@ Based on these factors, I opted to use egui for the user interface.
     + It should skip comments (lines beginning with a semicolon) and lines consisting only of whitespace.
     + It should parse each opcode mnemonic, then a comma separated list of operands.
     + If the mnemonic is unrecognized the program should display an error and exit.
-    + It should treat the opcode and operands as case-insensitive, unless the operand is a string literal.
+    + It should treat the opcode and operands as case-insensitive.
     + It should be able to parse numeric literals of different bases (0xA3, 0b0111...).
     + If the given base for a numeric literal is invalid it should display an error and exit.
     + If an operand begins with a `%`, it should be treated as a register.
@@ -136,13 +136,11 @@ Based on these factors, I opted to use egui for the user interface.
     + If a symbol is defined multiple times, it should display an error and exit.
     + The machine code should be appended to a buffer.
   + The linker should iterate through the symbol usages
-    + If a symbol isn't defined in any of the symbol maps, it should show an error and exit.
+    + If a symbol isn't defined in any of the symbol maps, it should show an error and exit
     + It should insert the location of the symbol definition into the machine code at the usage address.
   + The linker should output the final machine code to a binary file given in the command line arguments.
 + _Emulator_
   + The emulator should be able to load a machine code file into memory.
-  + The emulator should be able to save its registers and memory to a file.
-  + The emulator should be able to load its registers and memory from a file.
   + The state of the CPU and memory should be able to be saved/loaded from a file.
   + The emulator should execute the instruction at the virtual program counter if it is unpaused or the user requested to step 1 instruction.
     + It should decode the instruction at the program counter.
@@ -158,13 +156,14 @@ Based on these factors, I opted to use egui for the user interface.
     + This window should display if the CPU is currently active or not.
     + This window should show the the decoded string of the last instruction.
   + There should be a window to display the CPU registers.
-    + Whilst the emulation is paused, the register values should be editable by the user.
-    + It should verify whether the inputted value is valid for the base the number is in.
+    + The register values should be editable by the user.
+    + It should verify whether the inputted value is valid for the base the value is displayed in.
   + There should be a window to inspect the memory.
     + This window should display the memory address for each row.
     + The memory data should be displayed in hexadecimal.
-    + Whilst the emulation is paused, the user should be able to edit individual bytes.
+    + The user should be able to edit individual bytes.
     + It should verify whether the input is valid hexadecimal.
+    + The user should be able to jump to a specific address in the memory window.
   + There should be a window to view a virtual display.
     + The data for the display should be mapped to a region in the emulated memory.
     + #strike([With this window selected, any keyboard inputs should be sent to the CPU as interrupts.])
@@ -255,7 +254,7 @@ Methods:
 - #snippet("pub fn store_word(&mut self, addr: u16, x: u16)") - Write a `u16` to `memory` at the given address. Handles overflow at the last byte.
 - #snippet("pub fn store_byte(&mut self, addr: u16, x: u8)") - Write a `u8` to `memory` at the given address.
 - #snippet("pub fn save_state(&self) -> Vec<u8>") - Create a list of bytes containg the emulator state as defined in @emu_state_format.
-- #snippet("pub fn from_state(mut data: Vec<u8>) -> Self") - Load the state from a list of bytes in the format given in @emu_state_format.
+- #snippet("pub fn from_state(mut data: Vec<u8>) -> Option<Self>") - Load the state from a list of bytes in the format given in @emu_state_format.
 
 === `CircularBuffer`
 
@@ -302,7 +301,7 @@ Members:
 Methods:
 - #snippet("pub fn load_binary<P: AsRef<Path>>(&mut self, path: P)") - Load a binary from the given filepath into position 0 in the emulators memory.
 - #snippet("pub fn load_state<P: AsRef<Path>>(&mut self, path: P)") - Load the emulator state from the given filepath.
-- #snippet("pub fn save_state<P: AsRef<Path>>(&mut self, path: P) ") - Save the emulator state to the given file path.
+- #snippet("pub fn save_state<P: AsRef<Path>>(&mut self, path: P)") - Save the emulator state to the given file path.
 - #snippet("pub fn cycle(&mut self)") - Cycle the CPU and process any IO events as necessary.
 - #snippet("pub fn on_reset(&mut self)") - Reset the serial IO.
 - #snippet("pub fn log(&mut self, msg: String)") - Write a log message.
@@ -545,17 +544,66 @@ Many assembly instructions are implemented using other instructions. The `.db` a
 #sourcecode(desc: "Prints the first 24 Fibonacci terms to the serial console.", lang: "asm", "demos/fibonacci.asm")
 #sourcecode(desc: "Echos user input in the serial console.", lang: "asm", "demos/echo.asm")
 
+#set page(flipped: true)
 = Testing
 
 == Testing table
 
-// TODO
+#table(
+  columns: (auto, 1fr, 1.5fr, auto),
+  [*Number*], [*Tested functionality*], [*Evidence*], [*Objectives*],
+  [1.1], [Assembler help message if the required CLI arguments are not given.], [#image("tests/1_1.png")], [1.2],
+  [1.2], [Assembler error if source file doesn't exist or isn't valid UTF-8.], [#image("tests/1_2.png")], [1.1.1],
+  [1.3], [Assembler error for invalid mnemonics.], [#image("tests/1_3.png")], [1.3.3],
+  [1.4], [Assembler error for invalid registers.], [#image("tests/1_4.png")], [1.3.8],
+  [1.5], [Assembler error for invalid literals.], [#image("tests/1_5.png")], [1.3.6],
+  [1.6], [Assembler error for conflicting label definitions.], [#image("tests/1_6.png")], [1.3.10],
+  [1.7], [Assembler accepts mnemonics, registers and literals with varying case.], [#image("tests/1_7.png")], [1.3.4],
+  [1.8], [Assembler outputs object file (contents verified by other modules).], [#image("tests/1_8.png")], [1.4],
+  [2.1], [Linker help message if the required CLI arguments are not given.], [#image("tests/2_1.png")], [2.1],
+  [2.2], [Linker error if input objects don't exist or aren't valid.], [#image("tests/2_2.png")], [2.1, 2.2.1],
+  [2.3], [Linker error for duplicate label definitions.], [#image("tests/2_3.png")], [2.2.3],
+  [2.4], [Linker error for undefined label usages.], [#image("tests/2_4.png")], [2.3.1],
+  [2.5], [Linker outputs file (contents verified by other modules).], [#image("tests/2_5.png")], [2.4],
+  // TODO PART2
+  [3.1], [Loading a binary file into memory.], [], [3.1],
+  [3.2], [Loading an oversized binary file should fail.], [], [3.1],
+  [3.3], [Saving CPU state to a file.], [], [3.2],
+  [3.4], [Loading invalid state file should fail.], [], [3.2],
+  [3.5], [Windows can be opened, closed and resized.] , [], [3.4],
+  // PART2
+  [3.6], [CPU emulation can be paused/resumed. The button should also display the current state.], [], [3.5.1, 3.5.5],
+  [3.7], [CPU state window should show the last instruction.], [], [3.5.6],
+  [3.8], [CPU emulation speed is controllable by the user.], [], [3.5.3],
+  [3.9], [Maximum emulation speed exceeds 1 MHz.], [], [3.5.4],
+  [3.10], [CPU can step forward one cycle.], [], [3.5.2],
+  [3.11], [Invalid instructions cause CPU to reset.], [], [3.3.2],
+  [3.12], [Registers are displayed.], [], [3.6],
+  [3.13], [Regster inputs reject invalid hexadecimal.], [], [3.6.2],
+  [3.15], [Status register input rejects invalid binary.], [], [3.6.2],
+  // PART3
+  [3.16], [Memory window displays the data and addresses in hexadecimal.], [], [3.7.1, 3.7.2],
+  [3.17], [Bytes in the memory window are editable.], [], [3.7.3],
+  [3.18], [Memory window inputs reject invalid hexadecimal.], [], [3.7.4],
+  [3.19], [The scroll position of the window is updated correctly by the 'Jump to' input.], [], [3.7.5],
+  [3.20], [The 'Jump to' input rejects invalid hexadecimal.], [], [3.7.5],
+  // PART4
+  [3.21], [The display can be updated by the emulated program.], [], [3.8.1],
+  [3.22], [The color codes and coordinates of the hovered pixel are displayed.], [], [3.8.3],
+  // PART5
+  [3.23], [The user is able to type in a message.], [], [3.9.1],
+  [3.24], [Pressing enter submits the message to the queue, clearing the input text area.], [], [3.9.1],
+  [3.25], [The emulated program is able to recieve the data from the queue.], [], [3.9.2],
+  [3.26], [Data sent by the emulated program is visible in the serial window.], [], [3.9.3]
+)
+
+#set page(flipped: false)
 
 == Automated tests
 
-The `q16-tests` package allows automatically assembling and emulating programs, and verifying the outputs based on comments in the source file. This is used for testing the core functionality. Every time the CPU is halted, the test runner will verify the contents of the registers with the next occurance of a string with a pattern `;assert r3=36 r4=92 ...`.
+The `q16-tests` package allows automatically assembling and emulating programs, and verifying the outputs based on comments in the source file. This is used for testing the core functionality. Every time the CPU is halted, the test runner will verify the contents of the registers with the next occurance of a string with the pattern "`;assert r3=36 r4=92 ...`".
 
-These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.5.
+These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.3.
 
 #let testcode(path) = [
   - #raw(path)
@@ -580,12 +628,12 @@ These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.5.
 #testcode("programs/factorial.asm")
 #testcode("programs/bubble_sort.asm")
 
-#figure(image(width: 70%, "autotests.png"))
+#figure(image(width: 75%, "autotests.png"))
 
 == Rust unit tests
 
 Unit tests for internal utilities can be found at `q16/src/util.rs:100`. These all pass.
-#figure(image(width: 70%, "unittests.png"))
+#figure(image(width: 75%, "unittests.png"))
 
 = Evaluation
 

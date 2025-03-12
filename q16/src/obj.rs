@@ -5,17 +5,17 @@ use crate::{Instruction, err, assert};
 const MAGIC: &[u8] = b"q16";
 
 pub struct Obj {
-  pub labels: HashMap<String, u16>,
-  pub label_uses: Vec<(String, u16)>,
   pub data: Vec<u8>,
+  labels: HashMap<String, u16>,
+  label_uses: Vec<(String, u16)>,
 }
 
 impl Obj {
   pub fn new() -> Self {
     Self {
+      data: vec![],
       labels: HashMap::new(),
       label_uses: vec![],
-      data: vec![],
     }
   }
 

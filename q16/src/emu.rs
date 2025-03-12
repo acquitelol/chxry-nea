@@ -153,13 +153,16 @@ impl Emulator {
     out
   }
 
-  pub fn from_state(mut data: Vec<u8>) -> Self {
+  pub fn from_state(mut data: Vec<u8>) -> Option<Self> {
+    if data.len() < MEM_LEN + 12 * 2 {
+      return None;
+    }
     let mut registers = Registers::default();
     for (i, r) in Register::iter().enumerate() {
       registers.write(r, u16::from_le_bytes([data[MEM_LEN + i * 2], data[MEM_LEN + i * 2 + 1]]));
     }
     data.truncate(MEM_LEN);
-    Self { memory: data, registers }
+    Some(Self { memory: data, registers })
   }
 }
 

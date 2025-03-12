@@ -25,6 +25,7 @@ start:
 ; write %r1 to the serial port, clobbers %r1, %r7, %r8
 print_int:
   mov %r8, %sp
+  ; push ascii chars to the stack
   conv_loop:
     rem %r7, %r1, 10
     add %r7, %r7, 48
@@ -36,6 +37,7 @@ print_int:
     cmp %r1, 0
     jne conv_loop
 
+  ; pop and print each char
   output_loop:
     lb %r7, %sp
     sb %r7, 0xf002

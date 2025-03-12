@@ -224,8 +224,11 @@ impl<'a> Operand<'a> {
     match chars.next() {
       Some('0') => match chars.next() {
         Some('x') => Self::parse_literal(s, 16),
+        Some('X') => Self::parse_literal(s, 16),
         Some('o') => Self::parse_literal(s, 8),
+        Some('O') => Self::parse_literal(s, 8),
         Some('b') => Self::parse_literal(s, 2),
+        Some('B') => Self::parse_literal(s, 2),
         Some(c) if c.is_ascii_digit() => Self::parse_literal(s, 10),
         Some(c) => err!("unknown base '{}'", c),
         None => Ok(Self::Literal(0)),

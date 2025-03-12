@@ -154,13 +154,13 @@ impl EmuState {
   }
 
   pub fn load_state<P: AsRef<Path>>(&mut self, path: P) {
-    match fs::read(&path) {
-      Ok(bin) => {
-        self.emu = Emulator::from_state(bin);
+    match fs::read(&path).ok().and_then(|b| Emulator::from_state(b)) {
+      Some(emu) => {
+        self.emu = emu;
         self.last_instr = None;
         self.log(format!("Loaded state from '{}'.", path.as_ref().display()));
       }
-      Err(_) => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
+      None => self.log(format!("Couldn't load '{}'.", path.as_ref().display())),
     };
   }
 
