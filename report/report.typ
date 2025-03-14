@@ -10,7 +10,7 @@
 #page(numbering: none, [
   #v(2fr)
   #align(center, [
-    #text(20pt, weight: 700, [Assembler and emulator for a custom CPU architecture])
+    #text(22pt, weight: 700, [Interactive Emulator and Assembler for a RISC computer])
     #v(0.1fr)
     #text(16pt, [A-Level Computer Science NEA])
   ])
@@ -24,7 +24,7 @@
 // #set par(justify: true)
 #set page(margin: 2cm, footer: [*Centre Number:* #details.center_num #h(1fr) #context counter(page).display("1") #h(1fr) *Candidate Number:* #details.candidate_num])
 
-#page(outline(indent: true))
+#page(outline(indent: true, depth: 3))
 
 = Analysis
 
@@ -88,23 +88,25 @@ Based on these factors, I opted to use egui for the user interface.
 - RISC-V @riscv
   - An open source RISC instruction set architecture.
   - Contains different base instruction sets for 32-bit, 64-bit and 128-bit word sizes, along with extensions for features like multiplication and floating point.
-  - Separated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
+  - Seperated into unprivileged instructions for most applications, and privileged for features like virtual memory meant to be used by operating systems and similar.
 
-=== Similar Implementations
+=== Existing Implementations
 
-- ASTRO-8 @astro8
-  - An emulator and assembler for a 16-bit computer design.
-  - Supports many different IO methods, including a virtual display, keyboard and mouse input and sound output.
-  - Only has 3 general purpose registers, however supports multiple memory banks.
-  - The emulator is a desktop app with a separate assembler program.
-  - The emulator only shows the display output and provides no debugging information.
-- yasp @yasp
-  - A web based assembler development environment.
-  - Simulates different hardware devices (LEDs, buttons etc.).
-  - The code writing experience is interactive, with live error checking and helpful information when hovering instructions.
-  - Has a big focus on debugging, with breakpoints and the ability to step forward and backward through instructions.
-  - Can only run at \~25 KHz.
-  - #figure(caption: [The yasp user interface, showing the assembly code next to the debugger output.], image("yasp.png"))
+==== ASTRO-8
+
+ASTRO-8 is a 16-bit computer design, and an accompanying emulator and assembler. The emulator supports many different IO methods, including a 108x108 px virtual display, keyboard and mouse input, and sound output with 4 channels. The architecture supports using multiple banks of memory, however only has 3 general purpose registers. The emulator is a desktop application that works alongside a separate assembler CLI program, however it only provides the display output and lacks any debugging features @astro8.
+
+==== yasp
+
+yasp is a web-based assembler development environment designed to make assembly programming more approachable. It simulates different hardware devices such as LEDs, buttons and potentiometers. The code writing process is interactive, featuring live error checking and helpful instruction hints when hovering over instructions. Debugging is a major focus of yasp, with support for breakpoints and stepping both forward and backwards through instructions, making it easier to analyze program behaviour. One drawback is that because it is web-based, it only manages to reach speeds of around \~25 KHz, however without any display facilities this isn't such an issue @yasp.
+
+ #figure(caption: [The yasp user interface, showing the assembly code next to the debugger output.], image(width: 80%, "yasp.png"))
+
+==== RARS
+
+RARS (RISC-V Assembler and Runtime Simulator) is an assembler and simulator for the `riscv32` and `riscv64` instruction sets, with a goal of being an effective development environment for programmers getting started with RISC-V. RARS comes with a runtime that supports various syscalls, and debugging using breakpoints. The included assembler allows showing pseudo-instructions and the produced machine code side by side.
+
+#figure(caption: [The RARS user interface.], image(width: 80%, "rars.png"))
 
 == Objectives
 
@@ -125,6 +127,7 @@ Based on these factors, I opted to use egui for the user interface.
     + If a label is defined (string followed by colon), it should insert the current position and label name into a symbol map.
     + If a label is used, it should insert the current position and label name into a symbol usages map.
     + There should be pseudo instructions to define raw data.
+    + If an error occurs whilst assembling, the outputted error message should display the location in the source file where it occurred.
     + The assembler should emit the machine code for each instruction to a binary buffer.
   + The assembler should output a binary object file, containing the symbol maps and machine code.
 + _Linker_
@@ -163,7 +166,7 @@ Based on these factors, I opted to use egui for the user interface.
     + The memory data should be displayed in hexadecimal.
     + The user should be able to edit individual bytes.
     + It should verify whether the input is valid hexadecimal.
-    + The user should be able to jump to a specific address in the memory window.
+    + The user should be able to jump directly to a specific address in the memory window.
   + There should be a window to view a virtual display.
     + The data for the display should be mapped to a region in the emulated memory.
     + #strike([With this window selected, any keyboard inputs should be sent to the CPU as interrupts.])
@@ -172,25 +175,40 @@ Based on these factors, I opted to use egui for the user interface.
     + The user should be able to type in an a message, which will be then encoded as UTF-8 and queued to be sent to the CPU.
     + If the emulated program reads from a specific address, the value read should be popped from the queue.
     + If the emulated program writes to a specific address, it should be decoded as UTF-8 and displayed in the window.
++ The program should work on Windows, MacOS and Linux.
 
 = Documented Design
 
 == Project Structure
 
-This project will contain 5 rust crates,
+This project will contain the following 5 rust crates:
 - `q16`: The library where most of the logic is implemented. This is so the emulation and assembly logic can be reused between the emulator and tests. This library also hosts the enums that define the values assigned for each opcode and register.
 - `q16-asm`: The assembler CLI.
 - `q16-ld`: The linker CLI. Used to link together multiple object files produced by the assembler.
 - `q16-emu`: The emulator. A graphical application that can load machine code that has been linked and run programs interactively.
 - `q16-tests`: An automated test runner that assembles and runs programs and compares the registers to expected outputs.
 
+The project uses unstable APIs from Rust Nightly and was developed and tested on version `rustc 1.84.0-nightly (81eef2d36 2024-11-11)`.
+
+The project code conforms to standard Rust conventions, and has been linted using `Clippy` @clippy and `rustfmt` to ensure a consistent code style.
+
 == Libraries Used
 
-- #link("https://crates.io/crates/egui")[egui]/#link("https://crates.io/crates/eframe")[eframe] - UI Rendering
-- #link("https://crates.io/crates/rfd")[rfd] - Opening native file dialog menus.
-- #link("https://crates.io/crates/time")[time] - Retrieving and formatting timestamps. Used in the log window.
-- #link("https://crates.io/crates/owo-colors")[owo-colors] - Printing colours to the console.
-- #link("https://crates.io/crates/regex")[regex] - Regular expressions used for parsing automated test files.
+#table(
+  columns: 3,
+  [*Name*], [*Purpose*], [*Link*],
+  [`egui`], [Used for rendering UI widgets.], [https://crates.io/crates/egui],
+  [`eframe`], [Backend for creating and rendering to a window.], [https://crates.io/crates/eframe],
+  [`rfd`], [Used for opening native file dialog menus.], [https://crates.io/crates/rfd],
+  [`strum`], [Utilities for working with enums. Used for converting enums to and from strings.], [https://crates.io/crates/strum],
+  [`time`], [Used for working with timestamps.], [https://crates.io/crates/time],
+  [`owo-colors`], [Used to print coloured text to the console], [https://crates.io/crates/owo-colors],
+  [`regex`], [Regular expressions used to parse automated test files.], [https://crates.io/crates/regex]
+)
+
+== Project Overview
+
+#figure(caption: [Overview of the projects structs and how they are linked.], image("overview.png"))
 
 == Key Structures
 
@@ -209,7 +227,7 @@ Methods:
 
 === `Operand`
 
-An enum for the different kinds of operands.
+An enum for the different kinds of operands. Used whilst assembling.
 
 Methods:
 - #snippet("fn parse(s: &'a str) -> Result<Self, String>") - Parse the given string as an operand.
@@ -261,7 +279,7 @@ Methods:
 A circular queue. Used instead of `std::collections::VecDeque` for calculating the average elapsed cycle time.
 
 Members:
-- #snippet("buf: [T; N]") - The raw data. Is initially uninitilized and unsafe to access.
+- #snippet("buf: [T; N]") - The raw data. Is initially uninitialized and unsafe to access.
 - #snippet("head: usize") - Head pointer.
 - #snippet("len: usize") - Amount of elements in the queue.
 
@@ -293,7 +311,7 @@ Members:
 - #snippet("emu: Emulator") - The internal emulator.
 - #snippet("last_instr: Option<Instruction>") - The last decoded instruction.
 - #snippet("target_speed: u64") - The target CPU frequency in Hertz.
-- #snippet("time_history: CircularBuffer<Duration, 100_000>") - A circular buffer containing the time it took for the last 100000 CPU cycles.
+- #snippet("time_history: CircularBuffer<Duration, 100_000>") - A circular buffer containing the time taken for the last 100000 cycles.
 - #snippet("msg_log: Vec<(OffsetDateTime, String)>") - A log for messages to be shown to the user.
 - #snippet("serial_in_queue: VecDeque<u8>") - A queue containing serial input that is yet to be sent to the CPU.
 - #snippet("serial_out: Vec<u8>") - Any serial output from the CPU.
@@ -318,11 +336,11 @@ Methods:
 - #snippet("fn new(cc: &eframe::CreationContext) -> Self") - Initialize the application, spawning the emulation thread.
 - #snippet("fn for_windows<F: FnMut(Arc<Mutex<EmuState>>, &mut dyn Window, &mut bool)>(&mut self, ctx: &egui::Context, mut f: F)") - Internal utility to run the given closure for every window.
 - #snippet("fn file_button<P: Fn() -> Option<PathBuf> + Send + 'static, A: Fn(Arc<Mutex<EmuState>>, PathBuf) + Send + 'static>(&self, picker: P, action: A)") - Internal utility for the shared logic between file menu buttons. Spawns another thread to execute `picker` in order to not block the UI thread.
-- #snippet("fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame)") - Ran every frame. Renders the user interface.
+- #snippet("fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame)") - Called by `eframe` every frame. Renders the user interface.
 
 === `Window`
 
-Trait (similar to an interface in other languages) implemented for every window struct.
+Trait (similar to an interface in other languages) implemented for every window struct. Each window struct is stored in a `Box`, which allows for dynamic dispatch. 
 
 Methods:
 - #snippet("fn build<'a>(&self, window: egui::Window<'a>) -> egui::Window<'a>") - Allows any modifications to be made to the `egui::Window` if necessary.
@@ -334,9 +352,13 @@ Methods:
 === Emulation thread
 
 The emulation and UI rendering run on different threads in order to enable the emulation to run at speeds higher than the refresh rate of the user's display. This means that the `EmuState` must be wrapped in an `Arc` (reference counted pointer) to be sent across threads, and a `Mutex` to allow multiple threads to access the state by locking access to only one thread at a time. \
-The scheduler keeps track of time to be carried forward, in the cases that the last cycle took too long to execute, for example when the UI thread locks the mutex during rendering. Implementing this raised the maximum achievable emulation speed from \~10 MHz to \~25 MHz on an Apple M2 processor.
+The scheduler keeps track of time to be carried forward, in the cases that the last cycle took too long to execute, for example when the UI thread locks the mutex during rendering. Implementing this raised the maximum achievable emulation speed from \~10 MHz to \~25 MHz on an Apple M2 processor (the speed is less stable at small timescales with this method, however at high speeds this is not noticeable).
 
-#figure(caption: [The emulation thread scheduling algorithm], image(width: 60%, "emu_thread.png"))
+#figure(caption: [The emulation thread scheduling algorithm], image(width: 80%, "emu_thread.png"))
+
+=== Assemble file
+
+#figure(caption: [Flowchart for assembling a file.], image(width: 80%, "asm_file.png"))
 
 == File Formats
 
@@ -360,12 +382,43 @@ The UI will consist of windows that can be rearranged by the user and managed fr
 === CPU State Window
 
 This window allows the user to inspect and edit registers and control the how the CPU runs.
-#figure(caption: [CPU state window mockup], image(width: 70%, "ui_state.png"))
+#figure(caption: [CPU state window mockup], image(width: 80%, "ui_state.png"))
 
 === Memory Window
 
 The memory window is inspired by the designs of other hex editors, however without an ASCII section.
-#figure(caption: [Memory editor window mockup], image(width: 70%, "ui_memory.png"))
+#figure(caption: [Memory editor window mockup], image(width: 80%, "ui_memory.png"))
+
+== Demo Programs
+
+To demonstrate the functionality, and teach the user how to operate the software, I plan to write sample programs that will be shipped with the final product.
+
+=== Mandelbrot plotter
+
+The Mandelbrot set is defined in the complex plane for each complex number $c$, where $f_c (z) = z^2 + c$, does not diverge to infinity when iterated starting at $z=0$. @mandelbrot It can be plotted by running the following steps for every pixel on the display.
++ Scale and transform the coordinate of the pixel from the (0,0)-(128,96) range down to something more suitable, for example (-2, -4)-(0.8, 4). The coordinates will need to be represented as fixed point binary since the architecture has no floating point capabilities.
++ Starting at $z=0$, compute $z^2 + c$, where the x and y coordinates are the real and imaginary components of $c$ respectively.
++ If $|z|>4$, then break from the loop, as we know we will diverge to infinity now, otherwise repeat the computation of $z$ from the last step.
++ If the number of iterations exceeds a preset value, for example 50, then break from the also break from the loop as $f_c(z)$ is unlikely to diverge at this point.
++ Assign the pixel a colour based on the number of iterations before breaking.
+
+=== Game of Life
+
+Conway's Game of Life is a cellular automaton where the evolution of game is only determined by its initial state. The system is represented by a two-dimensional grid of cells, where each cell is either _alive_ or _dead_. The _neighbours_ of a cell are the 8 surrounding cells. With each step of the simulation, the following rules are applied for each cell @cgol.
++ Any live cells with less than 2 neighbours die (_underpopulation_).
++ Any live cells with 2 or 3 neighbours live.
++ Any live cells with more than 3 neighbours die (_overpopulation_).
++ Any dead cells with 3 neighbours become alive (_reproduction_).
+The next generation of the game is first computed in a seperate buffer, before being copied to the screen. This ensures that the rules are applied simultaneously to every cell at once.
+
+=== Fibonacci sequence
+
+The Fibonacci sequence is trivial to compute. Given the starting conditions $F_0 = 0$ and $F_1 = 1$, the nth term in the sequence is given by $F_n = F_(n-1) + F_(n-2)$.
+\ The relevant part of this program is outputting integers to the serial console as ASCII. To print the value $x$, the following steps are performed.
++ Calculate $x space % space 10$. Add the ASCII value of the character '0' to this and push it to the stack. Finally divide $x$ by 10.
++ Repeat step 1 until $x$ reaches.
++ Pop each element from the stack and write it to the serial port. Repeat until there are no characters left.
+Here the stack is used to reverse the digits from ascending to descending order.
 
 == Instruction set
 
@@ -549,65 +602,64 @@ Many assembly instructions are implemented using other instructions. The `.db` a
 
 == Testing table
 
+The emulator UI tests are evidenced in a seperate video file, with timestamps referenced here.
+
+#let pass(x) = text(fill: green, x);
+
 #table(
-  columns: (auto, 1fr, 1.5fr, auto),
-  [*Number*], [*Tested functionality*], [*Evidence*], [*Objectives*],
-  [1.1], [Assembler help message if the required CLI arguments are not given.], [#image("tests/1_1.png")], [1.2],
-  [1.2], [Assembler error if source file doesn't exist or isn't valid UTF-8.], [#image("tests/1_2.png")], [1.1.1],
-  [1.3], [Assembler error for invalid mnemonics.], [#image("tests/1_3.png")], [1.3.3],
-  [1.4], [Assembler error for invalid registers.], [#image("tests/1_4.png")], [1.3.8],
-  [1.5], [Assembler error for invalid literals.], [#image("tests/1_5.png")], [1.3.6],
-  [1.6], [Assembler error for conflicting label definitions.], [#image("tests/1_6.png")], [1.3.10],
-  [1.7], [Assembler accepts mnemonics, registers and literals with varying case.], [#image("tests/1_7.png")], [1.3.4],
-  [1.8], [Assembler outputs object file (contents verified by other modules).], [#image("tests/1_8.png")], [1.4],
-  [2.1], [Linker help message if the required CLI arguments are not given.], [#image("tests/2_1.png")], [2.1],
-  [2.2], [Linker error if input objects don't exist or aren't valid.], [#image("tests/2_2.png")], [2.1, 2.2.1],
-  [2.3], [Linker error for duplicate label definitions.], [#image("tests/2_3.png")], [2.2.3],
-  [2.4], [Linker error for undefined label usages.], [#image("tests/2_4.png")], [2.3.1],
-  [2.5], [Linker outputs file (contents verified by other modules).], [#image("tests/2_5.png")], [2.4],
-  // TODO PART2
-  [3.1], [Loading a binary file into memory.], [], [3.1],
-  [3.2], [Loading an oversized binary file should fail.], [], [3.1],
-  [3.3], [Saving CPU state to a file.], [], [3.2],
-  [3.4], [Loading invalid state file should fail.], [], [3.2],
-  [3.5], [Windows can be opened, closed and resized.] , [], [3.4],
-  // PART2
-  [3.6], [CPU emulation can be paused/resumed. The button should also display the current state.], [], [3.5.1, 3.5.5],
-  [3.7], [CPU state window should show the last instruction.], [], [3.5.6],
-  [3.8], [CPU emulation speed is controllable by the user.], [], [3.5.3],
-  [3.9], [Maximum emulation speed exceeds 1 MHz.], [], [3.5.4],
-  [3.10], [CPU can step forward one cycle.], [], [3.5.2],
-  [3.11], [Invalid instructions cause CPU to reset.], [], [3.3.2],
-  [3.12], [Registers are displayed.], [], [3.6],
-  [3.13], [Regster inputs reject invalid hexadecimal.], [], [3.6.2],
-  [3.15], [Status register input rejects invalid binary.], [], [3.6.2],
-  // PART3
-  [3.16], [Memory window displays the data and addresses in hexadecimal.], [], [3.7.1, 3.7.2],
-  [3.17], [Bytes in the memory window are editable.], [], [3.7.3],
-  [3.18], [Memory window inputs reject invalid hexadecimal.], [], [3.7.4],
-  [3.19], [The scroll position of the window is updated correctly by the 'Jump to' input.], [], [3.7.5],
-  [3.20], [The 'Jump to' input rejects invalid hexadecimal.], [], [3.7.5],
-  // PART4
-  [3.21], [The display can be updated by the emulated program.], [], [3.8.1],
-  [3.22], [The color codes and coordinates of the hovered pixel are displayed.], [], [3.8.3],
-  // PART5
-  [3.23], [The user is able to type in a message.], [], [3.9.1],
-  [3.24], [Pressing enter submits the message to the queue, clearing the input text area.], [], [3.9.1],
-  [3.25], [The emulated program is able to recieve the data from the queue.], [], [3.9.2],
-  [3.26], [Data sent by the emulated program is visible in the serial window.], [], [3.9.3]
+  columns: (auto, 1fr, 1fr, 2fr, auto),
+  table.header([*Number*\ #pass([Pass])/#text(fill: red, [Fail])], [*Input*], [*Expected Output*], [*Evidence*], [*Objectives*]),
+  pass([1.1]), [Assembler CLI arguments incomplete.], [Help message is displayed.], [#image("tests/1_1.png")], [1.2],
+  pass([1.2]), [Invalid UTF-8 source file.], [Error message], [#image("tests/1_2.png")], [1.1.1],
+  pass([1.3]), [Non existent source file.], [Error message], [#image("tests/1_3.png")], [1.1.1],
+  pass([1.4]), [Invalid mnemonic used in the source file.], [Error message and location.], [#image("tests/1_4.png")], [1.3.3\ 1.3.13],
+  pass([1.5]), [Invalid register used in the source file.], [Error message and location.], [#image("tests/1_5.png")], [1.3.8\ 1.3.13],
+  pass([1.6]), [Invalid base used for integer literal.], [Error message and location.], [#image("tests/1_6.png")], [1.3.5\ 1.3.6\ 1.3.13],
+  pass([1.7]), [Invalid digit used for integer literal.], [Error message and location.], [#image("tests/1_7.png")], [1.3.5\ 1.3.6\ 1.3.13],
+  pass([1.8]), [Conflicting label definitions in source file.], [Error message, location and problematic label name.], [#image("tests/1_8.png")], [1.3.10\ 1.3.13],
+  pass([1.9]), [Source file containing mnemonics, registers and literals with varying case.], [Compiled object file.], [#image("tests/1_9.png")], [1.3.4\ 1.3.5],
+  pass([1.10]), [Valid source file.], [Object file outputted to correct path (contents are verified by other modules).], [#image("tests/1_10.png")], [1.4],
+  pass([2.1]), [Linker CLI arguments incomplete.], [Help message is displayed.], [#image("tests/2_1.png")], [2.1],
+  pass([2.2]), [Input object with invalid header.], [Error message identifying problematic file.], [#image("tests/2_2.png")], [2.1\ 2.2.1],
+  pass([2.3]), [Non existent input object.], [Error message.], [#image("tests/2_3.png")], [2.1],
+  pass([2.4]), [Linking objects that both contain labels with the same name], [Error message displaying problematic label name.], [#image("tests/2_4.png")], [2.2.3],
+  pass([2.5]), [Linking objects that contain labels that are not defined anywhere.], [Error message displaying problematic label name.], [#image("tests/2_5.png")], [2.3.1],
+  pass([2.6]), [Valid input objects.], [Output at correct path.], [#image("tests/2_6.png")], [2.4],
+  pass([3.1]), [Clicking "File>Load Binary" and selecting a file < 65 KiB.], [The file is loaded into the emulators memory.], [Video timestamp 00:01], [3.1],
+  pass([3.2]), [Clicking "File>Load Binary" and selecting a file > 65 KiB.], [An error is displayed.], [Video timestamp 00:06], [3.1],
+  pass([3.3]), [Clicking "File>Save State".], ["The save file should be created at the user provided location."], [Video timestamp 00:13], [3.2],
+  pass([3.4]), [Clicking "File>Load State" and selecting a state file.], ["The state of the CPU should be restored from the file."], [Video timestamp 00:19], [3.2],
+  pass([3.5]), [Clicking CPU play button.], [The emulation should begin at the set speed. The button should update to a stop symbol.], [Video timestamp 00:32], [3.5.1\ 3.5.5],
+  pass([3.6]), [Clicking CPU stop button.], [The emulation should stop. The button should update to a play symbol.], [Video timestamp 00:35], [3.5.1\ 3.5.5],
+  pass([3.7]), [Clicking CPU step instruction button.], [One cycle should be processed.], [Video timestamp 00:42], [3.5.2],
+  pass([3.8]), [Varying the emulation speed while CPU is running.], [The observed speed of cycles should change.], [Video timestamp 00:35], [3.5.3],
+  pass([3.10]), [Setting the emulation speed to a value greater than 1 MHz.], [The observed speed should be at least 1 MHz.], [Video timestamp 00:40], [3.5.4],
+  pass([3.11]), [Typing valid hexadecimal into the register inputs.], [The value should be updated.], [Video timestamp 00:49], [3.6],
+  pass([3.12]), [Typing invalid hexadecimal into the register inputs.], [The invalid value should not be saved.], [Video timestamp 00:52], [3.6.2],
+  pass([3.13]), [Typing valid binary into the status register input.], [The value should be updated.], [Video timestamp 00:55], [3.6.2],
+  pass([3.14]), [Typing invalid binary into the status register input.], [The invalid value should not be saved.], [Video timestamp 01:10], [3.6.2],
+  pass([3.15]), [Typing valid hexadecimal into the memory cells.], [The values should be stored.], [Video timestamp 01:04], [3.7.1\ 3.7.2\ 3.7.3],
+  pass([3.16]), [Typing invalid hexadecimal into the memory cells.], [The invalid value should not be stored.], [Video timestamp 01:09], [3.7.4],
+  pass([3.17]), [Typing valid hexadecimal into the 'Jump To' input.], [The memory window should scroll to the correct address.], [Video timestamp 01:11], [3.7.5],
+  pass([3.20]), [Typing invalid hexadecimal into the 'Jump To' input.], [The value should not be updated and the window should not scroll.], [Video timestamp 01:15], [3.7.5],
+  pass([3.21]), [Run a program that uses the display.], [The contents of the display should be updated.], [Video timestamp 01:24], [3.8.1],
+  pass([3.22]), [Hover pixels on the display.], [The color codes and coordinates of the hovered pixel are displayed.], [Video timestamp 01:25], [3.8.3],
+  pass([3.23]), [Type a message into the serial console.], [The users input is displayed.], [Video timestamp 01:40], [3.9.1],
+  pass([3.24]), [Pressing enter with a message in the serial console input.], [The input should be sent to the CPU.], [Video timestamp 01:45], [3.9.1\ 3.9.2],
+  pass([3.25]), [Using a program that outputs to the serial console.], [The output is visible in the serial console window.], [Video timestamp 01:45], [3.9.3],
 )
 
 #set page(flipped: false)
 
 == Automated tests
 
-The `q16-tests` package allows automatically assembling and emulating programs, and verifying the outputs based on comments in the source file. This is used for testing the core functionality. Every time the CPU is halted, the test runner will verify the contents of the registers with the next occurance of a string with the pattern "`;assert r3=36 r4=92 ...`".
+The `q16-tests` package allows automatically assembling and emulating programs, and verifying the outputs based on comments in the source file. This is used for testing the core functionality. Every time the CPU is halted, the test runner will verify the contents of the registers with the next occurrence of a string with the pattern "`;assert r3=36 r4=92 ...`".
 
 These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.3.
 
 #let testcode(path) = [
-  - #raw(path)
-    #zebraw(lang: false, text(10pt, raw(lang: "asm", block: true, read("../tests/auto/" + path))))
+  ==== #raw(path)
+  #zebraw(lang: false, text(10pt, raw(lang: "asm", block: true, read("../tests/auto/" + path))))
 ]
 
 #testcode("literals.asm")
@@ -628,14 +680,24 @@ These tests cover all objectives under 1.3, 2.2.2, 2.3.2, 2.2.4 and 3.3.
 #testcode("programs/factorial.asm")
 #testcode("programs/bubble_sort.asm")
 
-#figure(image(width: 75%, "autotests.png"))
+#figure(image(width: 80%, "autotests.png"))
 
 == Rust unit tests
 
 Unit tests for internal utilities can be found at `q16/src/util.rs:100`. These all pass.
-#figure(image(width: 75%, "unittests.png"))
+#figure(image(width: 80%, "unittests.png"))
 
 = Evaluation
+
+Overall, I believe my project achieves the goals set out by the client and has met all of the agreed upon objectives. Due to my original interrupt design being awkward to work with, I agreed with the client to abandon objective 3.8.2 (keyboard input interrupts), and introduced objective 3.9 (the serial console). The serial console is much more friendly for the user to work with as they do not need to worry about font rendering on the display to output text.
+
+== Client Feedback
+
+The client found the UI simple and intuitive to use, and agreed that all objectives were met. They said the program helps them achieve their goals, and that reading the provided assembly snippets taught them alot about how programs are executed at a low level. Giving the program to other computer science students to test, they agreed, stating "The ability for windows to be moved and resized really improves the workflow for anyone looking to use the app". They also commented that "The simulation is surprisingly fast given it is being emulated", and that the ability to write graphical programs from assembly was very intriguing.
+
+== Possible improvements
+
+As this was designed as a tool for learning, it may have been a better idea to have the assembler integrated within the emulator's user interface, which would speed up the development cycle dramatically as users would be able to immediately test their changes. Due to the modular design of my codebase, adding this in the future would not require too much extra effort. Additionally support for extra peripherals could be added, for example secondary storage or hardware timers.
 
 = Bibliography
 

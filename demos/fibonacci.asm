@@ -28,7 +28,7 @@ print_int:
   ; push ascii chars to the stack
   conv_loop:
     rem %r7, %r1, 10
-    add %r7, %r7, 48
+    add %r7, %r7, 48 ; '0'
     div %r1, %r1, 10
     
     sub %sp, %sp, 1

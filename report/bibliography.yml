@@ -32,3 +32,30 @@ yasp:
   title: "yasp"
   author: "Michael Lutonsky"
   url: "https://yasp.me"
+rars:
+  type: web
+  title: "RARS"
+  author: "Benjamin Landers"
+  url: "https://github.com/TheThirdOne/rars"
+mandelbrot:
+  type: web
+  title: "Mandelbrot Set"
+  author: "Wikipedia"
+  url: "https://en.wikipedia.org/wiki/Mandelbrot_set"
+cgol:
+  type: web
+  title: "Conway's Game of Life"
+  author: "Wikipedia"
+  url: "https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life"
+docsrs:
+  type: web
+  title: "docs.rs"
+  url: "https://docs.rs/"
+ruststd:
+  type: web
+  title: "The Rust Standard Library Documentation"
+  url: "https://doc.rust-lang.org/std/"
+clippy:
+  type: web
+  title: "Clippy Documentation"
+  url: "https://doc.rust-lang.org/clippy/"
