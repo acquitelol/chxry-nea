@@ -62,7 +62,7 @@ impl Assembler {
           err!("'{}' requires 2 or 3 operands, found {}", mnemonic, operands.len())
         }
       }
-      Ok(opc @ (Opcode::Jeq | Opcode::Jne | Opcode::Jgt | Opcode::Jlt)) => {
+      Ok(opc @ (Opcode::Jeq | Opcode::Jne | Opcode::Jgt | Opcode::Jlt | Opcode::Jge | Opcode::Jle)) => {
         if operands.len() == 2 {
           self.assemble_2(opc, &operands)
         } else if operands.len() == 1 {

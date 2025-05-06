@@ -48,6 +48,8 @@ pub enum Opcode {
   Jne,
   Jgt,
   Jlt,
+  Jge,
+  Jle,
 }
 
 impl Opcode {

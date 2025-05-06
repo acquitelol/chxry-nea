@@ -94,6 +94,16 @@ impl Emulator {
           self.registers.pc = self.get_i_addr(instr)
         }
       }
+      Opcode::Jge => {
+        if !get_bit(self.registers.sts, sts::NEG) {
+          self.registers.pc = self.get_i_addr(instr);
+        }
+      }
+      Opcode::Jle => {
+        if get_bit(self.registers.sts, sts::NEG) || get_bit(self.registers.sts, sts::ZERO) {
+          self.registers.pc = self.get_i_addr(instr);
+        }
+      }
     };
     output
   }
